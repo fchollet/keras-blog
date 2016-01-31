@@ -57,10 +57,7 @@ a:link, a:visited {
 	text-decoration: underline;
 }
 a:hover, a:active, a.active, .active>a {
-	background-color: #d00000;
-	color: white;
 	text-decoration: underline;
-	/*text-shadow: 1px 1px 1px #333;*/
 }
 
 h1 a:hover {
@@ -141,6 +138,11 @@ aside, nav, article, figure {
 /***** Layout *****/
 img.right figure.right {float: right; margin: 0 0 2em 2em;}
 img.left, figure.left {float: right; margin: 0 0 2em 2em;}
+
+img {
+	max-width: 90%;
+	margin:auto;
+}
 
 /*
 	Header
