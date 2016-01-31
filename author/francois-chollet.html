@@ -1,53 +1,278 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-        <title>The Keras Blog - Articles by Francois Chollet</title>
+        <title>The Keras Blog - Francois Chollet</title>
         <meta charset="utf-8" />
+        <link rel="stylesheet" href="http://blog.keras.io/theme/css/main.css" type="text/css" />
+        <link rel="stylesheet" href="http://blog.keras.io/theme/css/pygment.css" type="text/css" />
+
+        <link href="https://fonts.googleapis.com/css?family=Lato:400,700|Source+Sans+Pro:400,700|Inconsolata:400,700" rel="stylesheet" type="text/css">
+        <link href="http://blog.keras.io/" type="application/atom+xml" rel="alternate" title="The Keras Blog ATOM Feed" />
+
+
+        <!--[if IE]>
+                <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+
+        <!--[if lte IE 7]>
+                <link rel="stylesheet" type="text/css" media="all" href="http://blog.keras.io/css/ie.css"/>
+                <script src="http://blog.keras.io/js/IE8.js" type="text/javascript"></script><![endif]-->
+
+        <!--[if lt IE 7]>
+                <link rel="stylesheet" type="text/css" media="all" href="http://blog.keras.io/css/ie6.css"/><![endif]-->
+
 </head>
 
 <body id="index" class="home">
         <header id="banner" class="body">
-                <h1><a href="http://blog.keras.io/">The Keras Blog <strong></strong></a></h1>
+                <h1>
+                    <a href="http://blog.keras.io/index.html">The Keras Blog </a>
+                </h1>
+                <p id="side">
+                    <a href="https://github.com/fchollet/keras">Keras</a> is a Deep Learning library for Python, that is simple, modular, and extensible.
+                </p>
+                <nav><ul>
+                <li><a href="http://blog.keras.io/">Archives</a></li>
+                    <li >
+                        <a href="https://github.com/fchollet/keras">Github</a>
+                    </li>
+                    <li >
+                        <a href="http://keras.io/">Documentation</a>
+                    </li>
+                    <li >
+                        <a href="https://groups.google.com/forum/#!forum/keras-users">Google Group</a>
+                    </li>
+                </ul></nav>
         </header><!-- /#banner -->
-        <nav id="menu"><ul>
-            <li><a href="https://github.com/fchollet/keras">Github</a></li>
-            <li><a href="http://keras.io/">Documentation</a></li>
-            <li><a href="https://groups.google.com/forum/#!forum/keras-users">Google Group</a></li>
-        </ul></nav><!-- /#menu -->
-<section id="content">
-<h2>Articles by Francois Chollet</h2>
 
-<ol id="post-list">
+     <section id="content" class="body">
+        <aside id="featured"><article>
+                <h1 class="entry-title"><a href="http://blog.keras.io/how-convolutional-neural-networks-see-the-world.html">How convolutional neural networks see the world</a></h1>
+<footer class="post-info">
+        <abbr class="published" title="2016-01-30T00:00:00+01:00">
+                Sat 30 January 2016
+        </abbr>
+
+        <address class="vcard author">
+                By <a class="url fn" href="http://blog.keras.io/author/francois-chollet.html">Francois Chollet</a>
+        </address>
+<p>In <a href="http://blog.keras.io/category/demo.html">Demo</a>. </p>
+</p></footer><!-- /.post-info --><!-- /.post-info -->
+                <h2>An exploration of convnet filters with Keras</h2>
+<p>In this post, we take a look at what deep convolutional neural networks (convnets) really learn, and how they understand the images we feed them. We will use Keras to visualize inputs that maximize the activation of the filters in different layers of the VGG16 architecture, trained on ImageNet. All of the code used in this post can be found <a href="https://github.com/fchollet/keras/blob/master/examples/conv_filter_visualization.py">on Github</a>.</p>
+<p><img alt="Some convnet filters" src="/img/conv5_2_stitched_filters_8x3.png" /></p>
+<p>VGG16 (also called OxfordNet) is a convolutional neural network architecture named after the <a href="http://www.robots.ox.ac.uk/~vgg/">Visual Geometry Group</a> from Oxford, who developed it. It was used to <a href="http://www.robots.ox.ac.uk/~vgg/research/very_deep/">win the ILSVR (ImageNet) competition in 2014</a>. To this day is it still considered to be an excellent vision model, although it has been somewhat outperformed by more revent advances such as Inception and ResNet.</p>
+<p>Lorenzo Baraldi ported the pre-trained Caffe version of VGG16 (as well as VGG19) to a Keras weights file, so we will just load that to do our experiments. You can download the weight file via <a href="https://gist.github.com/baraldilorenzo/07d7802847aaad0a35d3">this link</a>.</p>
+<p>First of all, let's start by defining the VGG16 model in Keras:</p>
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras.models</span> <span class="kn">import</span> <span class="n">Sequential</span>
+<span class="kn">from</span> <span class="nn">keras.layers</span> <span class="kn">import</span> <span class="n">Convolution2D</span><span class="p">,</span> <span class="n">ZeroPadding2D</span><span class="p">,</span> <span class="n">MaxPooling2D</span>
+
+<span class="n">img_width</span><span class="p">,</span> <span class="n">img_height</span> <span class="o">=</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">128</span>
+
+<span class="c"># this will contain our generated images</span>
+<span class="n">input_img</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">placeholder</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">img_width</span><span class="p">,</span> <span class="n">img_height</span><span class="p">))</span>
+
+<span class="c"># build the VGG16 network with our input_img as input</span>
+<span class="n">first_layer</span> <span class="o">=</span> <span class="n">ZeroPadding2D</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">input_shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">img_width</span><span class="p">,</span> <span class="n">img_height</span><span class="p">))</span>
+<span class="n">first_layer</span><span class="o">.</span><span class="n">input</span> <span class="o">=</span> <span class="n">input_img</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">Sequential</span><span class="p">()</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">first_layer</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Convolution2D</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;conv1_1&#39;</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">ZeroPadding2D</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Convolution2D</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;conv1_2&#39;</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">MaxPooling2D</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">strides</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)))</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">ZeroPadding2D</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Convolution2D</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;conv2_1&#39;</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">ZeroPadding2D</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Convolution2D</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;conv2_2&#39;</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">MaxPooling2D</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">strides</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)))</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">ZeroPadding2D</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Convolution2D</span><span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;conv3_1&#39;</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">ZeroPadding2D</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Convolution2D</span><span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;conv3_2&#39;</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">ZeroPadding2D</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Convolution2D</span><span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;conv3_3&#39;</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">MaxPooling2D</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">strides</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)))</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">ZeroPadding2D</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Convolution2D</span><span class="p">(</span><span class="mi">512</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;conv4_1&#39;</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">ZeroPadding2D</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Convolution2D</span><span class="p">(</span><span class="mi">512</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;conv4_2&#39;</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">ZeroPadding2D</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Convolution2D</span><span class="p">(</span><span class="mi">512</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;conv4_3&#39;</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">MaxPooling2D</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">strides</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)))</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">ZeroPadding2D</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Convolution2D</span><span class="p">(</span><span class="mi">512</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;conv5_1&#39;</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">ZeroPadding2D</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Convolution2D</span><span class="p">(</span><span class="mi">512</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;conv5_2&#39;</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">ZeroPadding2D</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Convolution2D</span><span class="p">(</span><span class="mi">512</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;conv5_3&#39;</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">MaxPooling2D</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">strides</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)))</span>
+
+<span class="c"># get the symbolic outputs of each &quot;key&quot; layer (we gave them unique names).</span>
+<span class="n">layer_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">([(</span><span class="n">layer</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">layer</span><span class="p">)</span> <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">])</span>
+</pre></div>
+
+
+<p>Note that we only go up to the last convolutional layer --we don't include fully-connected layers. The reason is that adding the fully connected layers forces you to use a fixed input size for the model (224x224, the original ImageNet format). By only keeping the convolutional modules, our model can be adapted to arbitrary input sizes (defined by <code>img_width</code> and <code>img_height</code>).</p>
+<p>Next, we load the pre-trained weights. In general, loading weights into a Keras model is simply done via <code>model.load_weights(weights_path)</code>, but in our case we don't need the last layers, so we need to parse the file manually.</p>
+<div class="highlight"><pre><span class="kn">import</span> <span class="nn">h5py</span>
+
+<span class="n">weights_path</span> <span class="o">=</span> <span class="s">&#39;vgg16_weights.h5&#39;</span>
+
+<span class="n">f</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">weights_path</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s">&#39;nb_layers&#39;</span><span class="p">]):</span>
+    <span class="k">if</span> <span class="n">k</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">):</span>
+        <span class="c"># we don&#39;t look at the last (fully-connected) layers in the savefile</span>
+        <span class="k">break</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span><span class="s">&#39;layer_{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">k</span><span class="p">)]</span>
+    <span class="n">weights</span> <span class="o">=</span> <span class="p">[</span><span class="n">g</span><span class="p">[</span><span class="s">&#39;param_{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">p</span><span class="p">)]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s">&#39;nb_params&#39;</span><span class="p">])]</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">set_weights</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+<span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+<span class="k">print</span><span class="p">(</span><span class="s">&#39;Model loaded.&#39;</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Now let's define a loss function that will seek to maximize the activation of a specific filter (<code>filter_index</code>) in a specific layer (<code>layer_name</code>). We do this via a Keras backend function, which allows our code to run both on top of TensorFlow and Theano. This is useful because TensorFlow has much faster convolutions on CPU, while Theano has somewhat faster convolutions on GPU at the moment: this allows us to pick the right backend based on our environment, without any changes in our code.</p>
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras</span> <span class="kn">import</span> <span class="n">backend</span> <span class="k">as</span> <span class="n">K</span>
+
+<span class="n">layer_name</span> <span class="o">=</span> <span class="s">&#39;conv5_1&#39;</span>
+<span class="n">filter_index</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c"># can be any integer from 0 to 511, as there are 512 filters in that layer</span>
+
+<span class="c"># build a loss function that maximizes the activation</span>
+<span class="c"># of the nth filter of the layer considered</span>
+<span class="n">layer_output</span> <span class="o">=</span> <span class="n">layer_dict</span><span class="p">[</span><span class="n">layer_name</span><span class="p">]</span><span class="o">.</span><span class="n">get_output</span><span class="p">()</span>
+<span class="n">loss</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">layer_output</span><span class="p">[:,</span> <span class="n">filter_index</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span>
+
+<span class="c"># compute the gradient of the input picture wrt this loss</span>
+<span class="n">grads</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">gradients</span><span class="p">(</span><span class="n">loss</span><span class="p">,</span> <span class="n">input_img</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="c"># normalization trick: we normalize the gradient</span>
+<span class="n">grads</span> <span class="o">=/</span> <span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">K</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">grads</span><span class="p">)))</span> <span class="o">+</span> <span class="mf">1e-5</span><span class="p">)</span>
+
+<span class="c"># this function returns the loss and grads given the input picture</span>
+<span class="n">iterate</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">function</span><span class="p">([</span><span class="n">input_img</span><span class="p">],</span> <span class="p">[</span><span class="n">loss</span><span class="p">,</span> <span class="n">grads</span><span class="p">])</span>
+</pre></div>
+
+
+<p>All very simple. The only trick here is to normalize the gradient of the pixels of the input image, which avoids very small and very large gradients and ensures a smooth gradient ascent process.</p>
+<p>Now we can use the Keras function we defined to do gradient ascent in the input space, with regard to our filter activation loss:</p>
+<div class="highlight"><pre><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="c"># we start from a gray image with some noise</span>
+<span class="n">input_img_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">img_width</span><span class="p">,</span> <span class="n">img_height</span><span class="p">))</span> <span class="o">*</span> <span class="mi">20</span> <span class="o">+</span> <span class="mf">128.</span>
+<span class="c"># run gradient ascent for 20 steps</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">20</span><span class="p">):</span>
+    <span class="n">loss_value</span><span class="p">,</span> <span class="n">grads_value</span> <span class="o">=</span> <span class="n">iterate</span><span class="p">([</span><span class="n">input_img_data</span><span class="p">])</span>
+    <span class="n">input_img_data</span> <span class="o">+=</span> <span class="n">grads_value</span> <span class="o">*</span> <span class="n">step</span>
+</pre></div>
+
+
+<p>This operation takes a few seconds on CPU with TensorFlow.</p>
+<p>We can then extract and display the generated input:</p>
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">scipy.misc</span> <span class="kn">import</span> <span class="n">imsave</span>
+
+<span class="c"># util function to convert a tensor into a valid image</span>
+<span class="k">def</span> <span class="nf">deprocess_image</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="c"># normalize tensor: center on 0., ensure std is 0.1</span>
+    <span class="n">x</span> <span class="o">-=</span> <span class="n">x</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+    <span class="n">x</span> <span class="o">/=</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">std</span><span class="p">()</span> <span class="o">+</span> <span class="mf">1e-5</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">*=</span> <span class="mf">0.1</span>
+
+    <span class="c"># clip to [0, 1]</span>
+    <span class="n">x</span> <span class="o">+=</span> <span class="mf">0.5</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">)</span>
+
+    <span class="c"># convert to RGB array</span>
+    <span class="n">x</span> <span class="o">*=</span> <span class="mi">255</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">transpose</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s">&#39;uint8&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">x</span>
+
+<span class="n">img</span> <span class="o">=</span> <span class="n">input_img_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">img</span> <span class="o">=</span> <span class="n">deprocess_image</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+<span class="n">kept_filters</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">img</span><span class="p">,</span> <span class="n">loss_value</span><span class="p">))</span>
+<span class="n">imsave</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">_filter_</span><span class="si">%d</span><span class="s">.png&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">layer_name</span><span class="p">,</span> <span class="n">filter_index</span><span class="p">),</span> <span class="n">img</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Result:</p>
+<p><img alt="conv5_1_filter_0" src="/img/conv5_1_filter_0.png" /></p>
+<h2>Visualize all the filters!</h2>
+<p>Now the fun part. We can use the same code to systematically display what sort of input (they're not unique) maximizes each filter in each layer, giving us a neat visualization of the convnet's modular-hierarchical decomposition of its visual space.</p>
+<p>The first layers basically just encode direction and color. These direction and color filters then get combined into basic grid and spot textures. These textures gradually get combined into increasingly complex patterns.</p>
+<p>You can think of the filters in each layer as a basis of vectors, typically overcomplete, that can be used to encode the layer's input in a compact way. The filters become more intricate as they start incorporating information from an increasingly larger spatial extent.</p>
+<p><img alt="vgg16_filters_overview" src="/img/vgg16_filters_overview.jpg" /></p>
+<p>A remarkable observation: a lot of these filters are identical, but rotated by some non-random factor (typically 90 degrees). This means that we could potentially compress the number of filters used in a convnet by a large factor by finding a way to make the convolution filters rotation-invariant. I can see a few ways this could be achieved --it's an interesting research direction.</p>
+<p>Shockingly, the rotation observation holds true even for relatively high-level filters, such as those in <code>conv4_1</code>.</p>
+<p>In the highest layers (<code>conv5_2</code>, <code>conv5_3</code>) we start to recognize textures similar to that found in the objects that network was trained to classify, such as feathers, eyes, etc.</p>
+<h2>Convnet dreams</h2>
+<p>Another fun thing to do is to apply these filters to photos (rather than to noisy all-gray inputs). This is the principle of Deep Dreams, popularized by Google last year. By picking specific combinations of filters rather than single filters, you can achieve quite pretty results. If you are interested in this, you could also check out the <a href="https://github.com/fchollet/keras/blob/master/examples/deep_dream.py">Deep Dream example in Keras</a>, and <a href="http://googleresearch.blogspot.com/2015/06/inceptionism-going-deeper-into-neural.html">the Google blog post</a> that introduced the technique.</p>
+<p><img alt="Deep filter dreams" src="/img/filter_dream.jpg" /></p>
+<h2>Finding an input that maximizes a specific class</h2>
+<p>Now for something else --what if you included the fully connected layers at the end of the network, and tried to maximize the activation of a specific output of the network? Would you get an image that looked anything like the class encoded by that output? Let's try it.</p>
+<p>We can just use the <a href="https://gist.github.com/baraldilorenzo/07d7802847aaad0a35d3">original VGG16 specification</a>, and define this very simple loss function:</p>
+<div class="highlight"><pre><span class="n">layer_output</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">get_output</span><span class="p">()</span>
+<span class="n">loss</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">layer_output</span><span class="p">[:,</span> <span class="n">output_index</span><span class="p">])</span>
+</pre></div>
+
+
+<p>Let's apply it to <code>output_index = 65</code> (which is the sea snake class in ImageNet). We quickly reach a loss of 0.999, which means that the convnet is 99.9% confident that the generated input is a sea snake. Let's take a look at the generated input.</p>
+<p><img alt="VGG16 sea snake" src="/img/seasnake.jpg" /></p>
+<p>Oh well. Doesn't look like a sea snake. Surely that's a fluke, so let's try again with <code>output_index = 18</code> (the magpie class).</p>
+<p><img alt="VGG16 magpie" src="/img/magpie.jpg" /></p>
+<p>Ok then. So our convnet's notion of a magpie looks nothing like a magpie --at best, the only resemblance is at the level of local textures (feathers, maybe a beak or two). Does it mean that convnets are bad tools? Of course not, they serve their purpose just fine. What it means is that we should refrain from our natural tendency to antropomorphise them and believe that they "understand", say, the concept of dog, or the appearance of a magpie, just because they are able to classify these objects with high accuracy. They don't, at least not to any any extent that would make sense to us humans.</p>
+<p>So what do they really "understand"? Two things: first, they understand a decomposition of their visual input space as a hierarchical-modular network of convolution filters, and second, they understand a probabilitistic mapping between certain combinations of these filters and a set of arbitrary labels. Naturally, this does not qualify as "seeing" in any human sense, and from a scientific perspective it certainly doesn't mean that we somehow solved computer vision at this point. Don't believe the hype; we are merely standing on the first step of a very tall ladder.</p>
+<p>Some say that the hierarchical-modular decomposition of visual space learned by a convnet is analogous to what the human visual cortex does. It may or may not be true, but there is no strong evidence to believe so. Of course, one would expect the visual cortex to learn something similar, to the extent that this constitutes a "natural" decomposition of our visual world (in much the same way that the Fourier decomposition would be a "natural" decomposition of a periodic audio signal). But the exact nature of the filters and hierarchy, and the process through which they are learned, has most likely little in common with our puny convnets. The visual cortex is not convolutional to begin with, and while it is structured in layers, the layers are themselves structured into cortical columns whose exact purpose is still not well understood --a feature not found in our artificial networks (although Geoff Hinton is working on it). Besides, there is so much more to visual perception than the classification of static pictures --human perception is fundamentally sequential and active, not static and passive, and is tightly intricated with motor control (e.g. eye saccades).</p>
+<p>Think about this next time your hear some VC or big-name CEO appear in the news to warn you against the existential threat posed by our recent advances in deep learning. Today we have better tools to map complex information spaces than we ever did before, which is awesome, but at the end of the day they are tools, not creatures, and none of what they do could reasonably qualify as "thinking". Drawing a smiley face on a rock doesn't make it "happy", even if your primate neocortex tells you so.</p>
+<p>That said, visualizing what convnets learn is quite fascinating --who would have guessed that simple gradient descent with a reasonable loss function over a sufficiently large dataset would be enough to learn this beautiful hierarchical-modular network of patterns that manages to explain a complex visual space surprisingly well. Deep learning may not be intelligence is any real sense, but it's still working considerably better than anybody could have anticipated just a few years ago. Now, if only we understood why... ;-)</p>
+<p><em><a href="https://twitter.com/fchollet">@fchollet</a>, January 2016</em></p>
+        </article></aside><!-- /#featured -->
+                <h1>Other articles</h1>
+                <hr />
+                    <ol id="posts-list" class="hfeed">
         <li><article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://blog.keras.io/how-convolutional-neural-networks-see-the-world.html" rel="bookmark" title="Permalink to How convolutional neural networks see the world">How convolutional neural networks see the world</a></h2> </header>
-                <footer class="post-info">
-                    <abbr class="published" title="2016-01-30T00:00:00+01:00"> Sat 30 January 2016 </abbr>
-                    <address class="vcard author">By
-                        <a class="url fn" href="http://blog.keras.io/author/francois-chollet.html">Francois Chollet</a>
-                    </address>
-                </footer><!-- /.post-info -->
-                <div class="entry-content"> <h2>An exploration of convnet filters with Keras</h2>
-<p>In this post, we take a look at what deep convolutional neural networks (convnets) really learn, and how they understand the images we feed them. We will use Keras to visualize inputs that maximize the activation of the filters in different layers of ...</p> </div><!-- /.entry-content -->
-        </article></li>
-        <li><article class="hentry">
-                <header> <h2 class="entry-title"><a href="http://blog.keras.io/keras-now-running-on-tensorflow.html" rel="bookmark" title="Permalink to Keras, now running on TensorFlow">Keras, now running on TensorFlow</a></h2> </header>
-                <footer class="post-info">
-                    <abbr class="published" title="2015-12-01T00:00:00+01:00"> Tue 01 December 2015 </abbr>
-                    <address class="vcard author">By
-                        <a class="url fn" href="http://blog.keras.io/author/francois-chollet.html">Francois Chollet</a>
-                    </address>
-                </footer><!-- /.post-info -->
-                <div class="entry-content"> <p>The purpose of Keras is to be a model-level framework, providing a set of "Lego blocks" for building Deep Learning models in a fast and straightforward way.
+                <header>
+                        <h1><a href="http://blog.keras.io/keras-now-running-on-tensorflow.html" rel="bookmark" title="Permalink to Keras, now running on TensorFlow">Keras, now running on TensorFlow</a></h1>
+                </header>
+
+                <div class="entry-content">
+<footer class="post-info">
+        <abbr class="published" title="2015-12-01T00:00:00+01:00">
+                Tue 01 December 2015
+        </abbr>
+
+        <address class="vcard author">
+                By <a class="url fn" href="http://blog.keras.io/author/francois-chollet.html">Francois Chollet</a>
+        </address>
+<p>In <a href="http://blog.keras.io/category/news.html">News</a>. </p>
+</p></footer><!-- /.post-info --><!-- /.post-info -->
+                <p>The purpose of Keras is to be a model-level framework, providing a set of "Lego blocks" for building Deep Learning models in a fast and straightforward way.
 Among Deep Learning frameworks, Keras is resolutely high up on the ladder of abstraction.</p>
-<p>As such, Keras does not handle itself low-level tensor ...</p> </div><!-- /.entry-content -->
+<p>As such, Keras does not handle itself low-level tensor ...</p>
+                <a class="readmore" href="http://blog.keras.io/keras-now-running-on-tensorflow.html">read more</a>
+                </div><!-- /.entry-content -->
         </article></li>
 </ol><!-- /#posts-list -->
 </section><!-- /#content -->
-        <footer id="contentinfo" class="body">
+
+        <footer id="footer" class="body">
                 <address id="about" class="vcard body">
-                Proudly powered by <a href="http://getpelican.com/">Pelican</a>,
-                which takes great advantage of <a href="http://python.org">Python</a>.
+                Powered by <a href="http://alexis.notmyidea.org/pelican/">pelican</a>, which takes great advantages of <a href="http://python.org">python</a>.
                 </address><!-- /#about -->
-        </footer><!-- /#contentinfo -->
+        </footer><!-- /#footer -->
+
+    <script type="text/javascript">
+    var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+    document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+    try {
+        var pageTracker = _gat._getTracker("UA-61785484-1");
+    pageTracker._trackPageview();
+    } catch(err) {}</script>
 </body>
 </html>
