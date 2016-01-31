@@ -152,7 +152,6 @@ def deprocess_image(x):
 
 img = input_img_data[0]
 img = deprocess_image(img)
-kept_filters.append((img, loss_value))
 imsave('%s_filter_%d.png' % (layer_name, filter_index), img)
 ``` 
 
