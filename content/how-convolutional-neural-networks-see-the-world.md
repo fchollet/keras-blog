@@ -106,7 +106,7 @@ loss = K.mean(layer_output[:, filter_index, :, :])
 grads = K.gradients(loss, input_img)[0]
 
 # normalization trick: we normalize the gradient
-grads =/ (K.sqrt(K.mean(K.square(grads))) + 1e-5)
+grads /= (K.sqrt(K.mean(K.square(grads))) + 1e-5)
 
 # this function returns the loss and grads given the input picture
 iterate = K.function([input_img], [loss, grads])
