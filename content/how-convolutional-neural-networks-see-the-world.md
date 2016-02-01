@@ -142,7 +142,7 @@ def deprocess_image(x):
 
     # clip to [0, 1]
     x += 0.5
-    x = np.clip(x, 0, 255)
+    x = np.clip(x, 0, 1)
 
     # convert to RGB array
     x *= 255
