@@ -112,3 +112,46 @@ import keras
 If you don't see any error, it means you have susccess fully install Keras and all its dependencies.
 
 ![Ubuntu - Import Keras](/img/setup-keras/terminal/02-import-keras.png)
+
+## Install PyCharm
+
+PyCharm Community is a free and lightweight IDE for Python that will allow you writing, running and debugging your Python project very easily. This step is optional and if you have another IDE that you like to use, you can skip this step.
+
+![PyCharm](/img/setup-keras/pycharm/01-ide.jpg)
+
+First, we must install the dependency required to install PyCharm, the Java JRE. Open your terminal and run the following command to install the last version of the Oracle JRE.
+
+```
+sudo apt-get install default-jre
+```
+
+To make sure the Java runtime was properly installed, run the following command to get the current version of Java installed on the machine.
+
+```
+java -version
+```
+
+![Java version](/img/setup-keras/pycharm/02-java-version.png)
+
+Download **PyCharm Community** on your computer from https://www.jetbrains.com/pycharm/
+Then, open your terminal and run the following command to create the folder /opt/PyCharm
+
+```
+sudo mkdir -p /opt/PyCharm
+```
+
+Then, extract the file you've downloaded to this folder using the following command.
+
+```
+sudo tar -zxvf pycharm-community-5.0.4.tar.gz --strip-components 1 -C /opt/PyCharm
+```
+
+Now, you can open PyCharm using the following command.
+
+```
+sudo /opt/PyCharm/bin/pycharm.sh
+```
+
+![Run PyCharm](/img/setup-keras/pycharm/03-run-pycharm.png)
+
+Congratulation on following this guide, you are now ready to start your first Deep Learning project using Keras.
