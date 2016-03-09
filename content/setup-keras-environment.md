@@ -35,24 +35,80 @@ Select the city you are located to have the timezone correct. Then press the **C
 
 Select your keyboard layout. Then press the **Continue** button.
 
-![Ubuntu - ](/img/setup-keras/install/07-ubuntu-keyboard.png)
+![Ubuntu - Keyboard](/img/setup-keras/install/07-ubuntu-keyboard.png)
 
 Enter your name, the name of your computer, a username and a password. Then press the **Continue** button.
 
-![Ubuntu - ](/img/setup-keras/install/08-ubuntu-user-account.png)
+![Ubuntu - User Account](/img/setup-keras/install/08-ubuntu-user-account.png)
 
 Install in progress...
 
-![Ubuntu - ](/img/setup-keras/install/09-ubuntu-install.png)
+![Ubuntu - Install in progress](/img/setup-keras/install/09-ubuntu-install.png)
 
 You are one reboot away from the Ubuntu desktop. Then press the **Restart Now** button.
 
-![Ubuntu - ](/img/setup-keras/install/10-ubuntu-restart.png)
+![Ubuntu - Restart](/img/setup-keras/install/10-ubuntu-restart.png)
 
 Login using the credentials you've entered in the installation process.
 
-![Ubuntu - ](/img/setup-keras/install/11-ubuntu-login.png)
+![Ubuntu - Login](/img/setup-keras/install/11-ubuntu-login.png)
 
 Congratulation, you're on the Ubuntu desktop ready to install Keras. You might have some updates to install. Then press the **Install Now** button.
 
-![Ubuntu - ](/img/setup-keras/install/12-ubuntu-updates.png)
+![Ubuntu - Updates](/img/setup-keras/install/12-ubuntu-updates.png)
+
+## Install Keras and its dependencies
+
+First, you must open a **Terminal** and run the script bellow, line by line to install all the requirements of Keras and then Keras itself.
+
+```python
+# Python is installed by default with Ubuntu. 
+# Let's check the current version of Python
+python --version
+```
+
+On my computer I have the version 2.7.6 of python. This will be enough for our dev environment.
+
+![Ubuntu - Python version](/img/setup-keras/terminal/01-python-version.png)
+
+```python
+# Update all the current packages to their latest version
+sudo apt-get update
+
+# A lot of Python packages are available using PIP (Python Package Index)
+# Install the package python-pip
+sudo apt-get -y install python-pip
+
+# Packages needed to build Scipy and Numpy
+sudo apt-get install python2.7-dev build-essential python-dev gfortran
+
+# Other required packages for Scipy and Numpy
+sudo apt-get install libatlas-dev liblapack-dev
+
+# Install numpy and scipy. Those two packages might take a while to install
+sudo pip install numpy
+sudo pip install scipy
+
+# Install git to get the latest version of the next package
+sudo apt-get install git
+
+# Install Theano (backend for Keras)
+sudo pip install git+git://github.com/Theano/Theano.git
+
+# Install Keras
+sudo pip install keras
+```
+
+Here you are! You've installed the minimal packages to run your first script using Keras. To make sure everything works, keep your terminal open and enter the following commands:
+
+```python
+# Run the python shell
+python
+
+# This line will import the keras library
+import keras
+```
+
+If you don't see any error, it means you have susccess fully install Keras and all its dependencies.
+
+![Ubuntu - Import Keras](/img/setup-keras/terminal/02-import-keras.png)
