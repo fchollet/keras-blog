@@ -114,6 +114,22 @@ If you don't see any error, it means you have susccess fully install Keras and a
 
 ![Ubuntu - Import Keras](/img/setup-keras/terminal/02-import-keras.png)
 
+Now, let's run your first Neural Network with Keras. The following line will download an example script from the official Keras GitHub and run it in Python. This script is a Neural Network that learns how to perform additions. 
+
+```
+curl -ssl https://github.com/fchollet/keras/raw/master/examples/addition_rnn.py | python
+```
+
+![Run example](/img/setup-keras/terminal/03-run-example.png)
+
+After 4 training iterations...
+
+![Iteration 4](/img/setup-keras/terminal/04-iteration-4.png)
+
+After 20 training iterations...
+
+![Iteration 4](/img/setup-keras/terminal/05-iteration-20.png)
+
 ## Install PyCharm
 
 PyCharm Community is a free and lightweight IDE for Python that will allow you writing, running and debugging your Python project very easily. This step is optional and if you have another IDE that you like to use, you can skip this step.
