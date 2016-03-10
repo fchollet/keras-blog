@@ -1,4 +1,4 @@
-Title: Setup a new Keras environment
+Title: Install a Keras environment from scratch
 Date: 2016-03-09
 Category: News
 Author: Fabien Lavocat
@@ -93,6 +93,7 @@ sudo pip install scipy
 sudo apt-get install git
 
 # Install Theano (backend for Keras)
+# The other option is to TensorFlow (from Google) but we will see that option in a future post
 sudo pip install git+git://github.com/Theano/Theano.git
 
 # Install Keras
@@ -154,4 +155,4 @@ sudo /opt/PyCharm/bin/pycharm.sh
 
 ![Run PyCharm](/img/setup-keras/pycharm/03-run-pycharm.png)
 
-Congratulation on following this guide, you are now ready to start your first Deep Learning project using Keras.
+Congratulation on following this guide, you are now ready to start your first Deep Learning project using Keras on top of Theano.
