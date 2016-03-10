@@ -29,7 +29,7 @@ Quick confirmation, you still have time to go back and make changes to your part
 
 ![Ubuntu - Write the changes to disks](/img/setup-keras/install/05-ubuntu-erase-disk.png)
 
-Select the city you are located to have the timezone correct. Then press the **Continue** button.
+Select the city you are located to have the correct timezone. Then press the **Continue** button.
 
 ![Ubuntu - Where are you?](/img/setup-keras/install/06-ubuntu-location.png)
 
