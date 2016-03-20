@@ -1,4 +1,4 @@
-Title: Install a Keras environment from scratch
+Title: Set up a Keras Deep Learning environment from scratch
 Date: 2016-03-09
 Category: Tutorials
 Author: Fabien Lavocat
