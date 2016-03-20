@@ -1,6 +1,6 @@
 Title: Install a Keras environment from scratch
 Date: 2016-03-09
-Category: News
+Category: Tutorials
 Author: Fabien Lavocat
 
 This article will show you a step-by-step setup of a basic Linux environment to develop with Keras. The first step will be to setup an Ubuntu desktop machine, but you can use any Linux distribution you want. Then we will install all the packages needed to run Keras and all its dependencies. We will finish by an optional install of [PyCharm](https://www.jetbrains.com/pycharm/) that you can use as Python developer IDE.
