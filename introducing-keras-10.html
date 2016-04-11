@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-        <title>The Keras Blog - News</title>
+        <title>Introducing Keras 1.0</title>
         <meta charset="utf-8" />
         <link rel="stylesheet" href="http://blog.keras.io/theme/css/main.css" type="text/css" />
         <link rel="stylesheet" href="http://blog.keras.io/theme/css/pygment.css" type="text/css" />
@@ -44,9 +44,11 @@
                 </ul></nav>
         </header><!-- /#banner -->
 
-     <section id="content" class="body">
-        <aside id="featured"><article>
-                <h1 class="entry-title"><a href="http://blog.keras.io/introducing-keras-10.html">Introducing Keras 1.0</a></h1>
+<section id="content" class="body">
+<article>
+        <header> <h1 class="entry-title"><a href="introducing-keras-10.html"
+        rel="bookmark" title="Permalink to Introducing Keras 1.0">Introducing Keras 1.0</a></h1>  </header>
+        <div class="entry-content">
 <footer class="post-info">
         <abbr class="published" title="2016-04-11T00:00:00+02:00">
                 Mon 11 April 2016
@@ -57,7 +59,7 @@
         </address>
 <p>In <a href="http://blog.keras.io/category/news.html">News</a>. </p>
 </p></footer><!-- /.post-info --><!-- /.post-info -->
-                <p>Keras was initially released a year ago, late March 2015. It has made tremendous progress since, both on the development front, and as a community.</p>
+        <p>Keras was initially released a year ago, late March 2015. It has made tremendous progress since, both on the development front, and as a community.</p>
 <p>But continuous improvement isn't enough. A year of developing Keras, using Keras, and getting feedback from thousands of users has taught us a lot. To the point that we are now able to redesign it better than we could have the first time around.</p>
 <p>And so today we are releasing Keras 1.0. It isn't a patch on top of the previous version, it is actually a re-writing of Keras nearly from scratch. It maintains backwards compatibility while introducing a series of major features, made possible by a better design under the hood.</p>
 <p>Simplicity and accessibility have always been the targets guiding the Keras development efforts. The purpose of Keras is to make deep learning accessible to as many people as possible, by providing a set of "Lego blocks" for building Deep Learning models in a fast and simple way. Keras 1.0 pushes even further in that same direction.</p>
@@ -96,34 +98,10 @@ python setup.py install
 
 <h2>Porting custom Keras layers</h2>
 <p>Because the Keras internals have changed, custom Keras layers not work with the new version. However you can port them to the new version in just a minute. Simply follow the instructions in <a href="https://github.com/fchollet/keras/wiki/Porting-your-custom-layers-from-Keras-0.3-to-Keras-1.0">this guide</a>.</p>
-        </article></aside><!-- /#featured -->
-                <h1>Other articles</h1>
-                <hr />
-                    <ol id="posts-list" class="hfeed">
-        <li><article class="hentry">
-                <header>
-                        <h1><a href="http://blog.keras.io/keras-now-running-on-tensorflow.html" rel="bookmark" title="Permalink to Keras, now running on TensorFlow">Keras, now running on TensorFlow</a></h1>
-                </header>
+        </div><!-- /.entry-content -->
 
-                <div class="entry-content">
-<footer class="post-info">
-        <abbr class="published" title="2015-12-01T00:00:00+01:00">
-                Tue 01 December 2015
-        </abbr>
-
-        <address class="vcard author">
-                By <a class="url fn" href="http://blog.keras.io/author/francois-chollet.html">Francois Chollet</a>
-        </address>
-<p>In <a href="http://blog.keras.io/category/news.html">News</a>. </p>
-</p></footer><!-- /.post-info --><!-- /.post-info -->
-                <p>The purpose of Keras is to be a model-level framework, providing a set of "Lego blocks" for building Deep Learning models in a fast and straightforward way.
-Among Deep Learning frameworks, Keras is resolutely high up on the ladder of abstraction.</p>
-<p>As such, Keras does not handle itself low-level tensor ...</p>
-                <a class="readmore" href="http://blog.keras.io/keras-now-running-on-tensorflow.html">read more</a>
-                </div><!-- /.entry-content -->
-        </article></li>
-</ol><!-- /#posts-list -->
-</section><!-- /#content -->
+</article>
+</section>
 
         <footer id="footer" class="body">
                 <address id="about" class="vcard body">
