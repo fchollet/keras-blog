@@ -47,4 +47,4 @@ python setup.py install
 
 ## Porting custom Keras layers
 
-Because the Keras internals have changed, custom Keras layers not work with the new version. However you can port them to the new version in just a minute. Simply follow the instructions in [this guide](https://github.com/fchollet/keras/wiki/Porting-your-custom-layers-from-Keras-0.3-to-Keras-1.0).
+Because the Keras internals have changed, custom Keras layers will not work with the new version. However you can port them to the new version in just a minute. Simply follow the instructions in [this guide](https://github.com/fchollet/keras/wiki/Porting-your-custom-layers-from-Keras-0.3-to-Keras-1.0).
