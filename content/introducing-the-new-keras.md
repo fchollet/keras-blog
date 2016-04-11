@@ -26,7 +26,6 @@ The most significant feature introduced today is the functional API, a new way t
 
 - Improved Lambda layers.
 
-
 ...and much more.
 
 ## Installation
@@ -37,7 +36,7 @@ You can install the new version from PyPI:
 pip install keras --upgrade
 ```
 
-Or from the master branch on Gihub:
+Or from the master branch on GitHub:
 
 ```sh
 git clone https://github.com/fchollet/keras.git
