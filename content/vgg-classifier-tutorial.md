@@ -33,7 +33,7 @@ To prepare your data, you have to follow this directory architecture:
 
 The Caltech101 data is available for download here:  [http://www.vision.caltech.edu/Image_Datasets/Caltech101/101_ObjectCategories.tar.gz]. Once you extract the archive with ``tar xvf 101_ObjectCategories.tar.gz)`` you must have this directory architecture:
 
-``
+```
  * 101_ObjectCategories/
  	* Faces/
 		 * image_0001.jpg
@@ -50,7 +50,7 @@ The Caltech101 data is available for download here:  [http://www.vision.caltech.
 		* ...
  	* accordion/
 	* ...
-``
+```
 
 Advice: if you create your own classes, try to have a lot of variabilities for all your classes (i.e. if you have a cat category try to have different cat positions and different cat types, colors...).
 
