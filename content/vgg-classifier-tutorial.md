@@ -1,62 +1,62 @@
-Title: Keras, Make your own image classifier
+Title: Make your own image classifier with Keras
 Date: 2016-03-30
 Category: Tutorial
 Author: Gregory Senay
 
 
-This tutorial explains how to create image classifier, from an ImageNet pre-trained model, your own model on your own dataset.
+This tutorial explains how to create an image classifier, using a model pre-trained on ImageNet and fine-tuned over your own dataset.
 
-Prepare your dataset
+## Prepare your dataset
 -----
-Here, I will explain how to simply prepare your image dataset following an existing simple one: Caltech101.
-Caltech101 is a dataset of 101 categories (crocodile, camera, plane, soccer ball...) with 40 to 800 images per category, the size of image is bout 200x300.
+Here, I will explain how to prepare your image dataset following an existing simple one: Caltech101.
+Caltech101 is a dataset of 101 categories (crocodile, camera, plane, soccer ball...) with 40 to 800 images per category, the image size are different with an average of 200x300 (width=[80;3481] height=[92;3999]).
 To prepare your data, you have to follow this directory architecture:
 ```
-  * Main Directory # Name of you dataset
-    * Class1Name
-      * Image1Class1
-      * Image2Class1
-      * Image3Class1
+  * Main_Directory/ # is the directory where the directory name is your dataset name
+    * Class1Name/ # is a directory with the name of the class 1
+      * Image1Class1.jpg # is a picture file of the class 1
+      * Image2Class1.jpg
+      * Image3Class1.jpg
       * ...
-    * Class2Name
-      * Image1Class1
-      * Image2Class1
+    * Class2Name/
+      * Image1Class1.jpg
+      * Image2Class1.jpg
       * ...
-    * Class3Name
-      * Image1Class1
-      * Image2Class1
+    * Class3Name/
+      * Image1Class1.jpg
+      * Image2Class1.jpg
       * ...
-    * Class4Name
+    * Class4Name/
     * ...
 
 ```
 
-In the case of Caltech101, (available here: http://www.vision.caltech.edu/Image_Datasets/Caltech101/101_ObjectCategories.tar.gz), once you extract the archive with ``tar xvf 101_ObjectCategories.tar.gz)`` you have this directory architecture:
+The Caltech101 data is available for download here:  [http://www.vision.caltech.edu/Image_Datasets/Caltech101/101_ObjectCategories.tar.gz]. Once you extract the archive with ``tar xvf 101_ObjectCategories.tar.gz)`` you must have this directory architecture:
 
 ``
- * 101_ObjectCategories
- 	* Faces
+ * 101_ObjectCategories/
+ 	* Faces/
 		 * image_0001.jpg
  		 * image_0002.jpg
 		 * image_0003.jpg
 		 * ...
- 	* Leopards
+ 	* Leopards/
 		* image_0001.jpg
  		* image_0002.jpg
 		* ...
- 	* Motorbikes
+ 	* Motorbikes/
 		* image_0001.jpg
  		* image_0002.jpg
 		* ...
- 	* accordion
+ 	* accordion/
 	* ...
 ``
 
-Advice: if you create your own classes, try to have a minimum of 40 images with a lot of variabilities (i.e. if you have a cat category try to have different cat positions and different cat type, color...).
+Advice: if you create your own classes, try to have a lot of variabilities for all your classes (i.e. if you have a cat category try to have different cat positions and different cat types, colors...).
 
 Unfortunately, the model you are using below requires a same dimension for all of the images, so we need to load and harmonize the image dataset.
 
-### Browse and load the image directory in python
+## Browse and load the image directory in python
 First, you need to browse the directories with a simple script, and every time you find and an image, you need to normalize it by calling a ``ReadAndNormalizeImage`` function (define below).
 
 ```python
@@ -85,7 +85,7 @@ def load_data(dim, dirname):
 	label_name = np.array(label_name)
 	return X_data, y_data, label_name
 ```
-### Crop, resize and normalize images
+## Crop, resize and normalize images
 ``ReadAndNormalizeImage`` function requires ``python-cv2``, if you running a Ubuntu like system, you get it with: `` sudo apt-get install python-cv2``.
 
 The crop, resize and normalize image are split in different functions. The first one crop a square in the center of the image and resize it.
@@ -137,9 +137,9 @@ Once you're done you can save the file in the numpy format, to avoid to recreate
 
 ```python
 ...
-np.save("cifar100_X",X_data)
-np.save("cifar100_y",y_data)
-np.save("cifar100_label",label_name)
+np.save("caltech101_X",X_data)
+np.save("caltech101_y",y_data)
+np.save("caltech101_label",label_name)
 return X_data, y_data, label_name
 ```
 
@@ -156,7 +156,7 @@ This is the script to do the shuffle -- but be careful data and label must be sh
 arr = np.arange(len(X_data)) # arr = 0 1 2 3 .... 595
 np.random.shuffle(arr) # now arr is shuffled = 45 124 356 18 .... 12
 X_data = X_data[arr] # change the order of a shuffled index
-y_data = y_data[arr] # same thing of the label to keep the right label !
+y_data = y_data[arr] # same thing of the label to keep the right label!
 nb_classes = np.max(y_data)+1 # count how many classes in the dataset
 print("Nb classes:", nb_classes)
 
@@ -239,7 +239,7 @@ Modify VGG for your own dataset
 -------
 As you can see on the original VGG16 model train on ImageNet, the output number of classes is ``1000``. But you have to change it for your own dataset. To change it, you just need to change the last ``Dense`` (fully connected) layer of the model to fit with our dataset number of classes (``101`` in this tutorial).
 
-### Change the last layer
+## Change the last layer
 For changing the number of classes of your model, you need to redefine the layer:
 
 ```python
@@ -250,10 +250,10 @@ and reattached it to the before last layer:
 ```python
 mymodel.layers[-1].set_previous(pretrained_model.layers[-2])
 ```
-Nothing more !
+Nothing more!
 
-### Lock some layers for training
-Because ImageNet is a giant dataset compare to Caltech, the VGG16 pretrained model already know how to recognize the image details, but the model must be adapted/tuned to this dataset. A simple way to do this is to lock  all the convolution layers during the training, meaning the weights of the convolutional layers are never be update. Only the fully connected layers (``Dense``) are updated. But you can easily make some tests by changing the value of: ``unlock_last``. Increasing ``unlock_last`` means: more layers with by updated, decreasing ``unlock_last`` means: less layers are updated.
+## Lock some layers for training
+Because ImageNet is a giant dataset compared to Caltech, the VGG16 pretrained model already knows how to recognize the image details  (http://www.cc.gatech.edu/~hays/compvision/proj6/deepNetVis_small.png), but the model must be tuned to the Caltech dataset. A simple way is to freeze all the convolution layers during the training, meaning the weights of the convolutional layers are never updated. If the convolutional layers are not frozen it would quickly cause an overfitting on the Caltech dataset representations. Only the fully connected layers (``Dense``) are updated. But you can easily make some tests by changing the value of: ``unlock_last``. Increasing ``unlock_last`` means: more layers with by updated, decreasing ``unlock_last`` means: less layers are updated.
 
 In keras, it's easy! You just need to iterate on mymodel.layers to set ``trainable`` attribute of the layer to False or True:
 
@@ -266,20 +266,26 @@ for num in range(0,len(mymodel.layers)):
   else:
     layer.trainable = True # Unlocked for the Lasts
 ```
-### Compile the model
+## Compile the model
 Now, the model can be compile with the categorical cross-entropy loss function  (typically of classification model).
 Note that the learning rate need to be low, else the system is not able to adapted the model for your dataset.
-If it doesn't work for your own dataset, try to decrease first your the learning rate ``lr`` or next increase it (i.e. 0.05) or change the optimizer by `AdaGrad`, `AdaDelta`...
+If it doesn't work for your own dataset, try to decrease first your the learning rate ``lr`` or next increase it (i.e. 0.05) or change the optimizer by `AdaGrad`, `AdaDelta`, `rmsprop` ...
 ```python
 sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-mymodel.compile(optimizer=sgd, loss='categorical_crossentropy')
+mymodel.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=['accuracy'])
 ```
-### Train the model
+To change the optimizer,  you can compile the model with:
+```python
+mymodel.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
+# or
+mymodel.compile(optimizer='adadelta', loss='categorical_crossentropy', metrics=['accuracy'])
+```
+
+## Train the model
 With keras, one function is enough for doing the training, with couple of parameters:
 * X_data, Y_data are the dataset and the label
 * batch_size=64 is the batch size, if you have a GPU with a small memory size reduce it, with 12Gb you can easily increase to 128
 * validation_split=0.1, is the part of the data used for validate your model, this part is very important, you can only say your model is good enough if the accuracy of the validation is good!
-* show_accuracy=True, Display epoch by epoch information
 * shuffle=True, to shuffle the data at each epoch
 
 And at the end save the new model weights.
@@ -289,15 +295,18 @@ mymodel.fit(X_data, Y_data,
       batch_size=64,
       validation_split=0.1,
       nb_epoch=300,
-      show_accuracy=True,
       shuffle=True)
 
 mymodel.save_weights('my_model_weights.h5')
 ```
 
-If you respect this tutorial, you can quickly achieve an accuracy higher than 85% on caltech101 in 30 epochs, but don't hesitate to play with the different parameters of the model, like the batch_size, learning_rate... to improve the final validation accuracy.
+If you follow this tutorial, you can quickly achieve an accuracy above 85% on caltech101 in 30 epochs, but don't hesitate to play with the different parameters of the model, like the batch_size, learning_rate or the optimizer.
+Or change the model architecture, per example:
+- keep the convolutional layers frozen and increase the number of fully connected layers, but in this case apply a very low learning rate,
+- Unfroze all the layers, and also apply in this case a low learning rate
+All of this, to improve the final validation accuracy.
 
-### Test our model
+## Test our model
 For testing your model, first load and normalize the image (`cat.jpg`) and reshape it in a batch shape.
 If you have 4 images, the total shape will be (4,3,224,224).
 Then,
