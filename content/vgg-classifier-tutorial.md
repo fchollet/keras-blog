@@ -302,7 +302,8 @@ mymodel.save_weights('my_model_weights.h5')
 
 If you follow this tutorial, you can quickly achieve an accuracy above 85% on caltech101 in 30 epochs, but don't hesitate to play with the different parameters of the model, like the batch_size, learning_rate or the optimizer.
 Or change the model architecture, per example:
-- keep the convolutional layers frozen and increase the number of fully connected layers, but in this case apply a very low learning rate,
+- Keep the convolutional layers frozen and increase the number of fully connected layers, but in this case apply a very low learning rate.
+- Reduce the size of the fully connected layers (`Dense`), originally this model is design of ImageNet with 1000 classes so the fully connected layers are huge, Caltech101 has 101 so the fully connecter layers can be reduce.
 - Unfroze all the layers, and also apply in this case a low learning rate
 All of this, to improve the final validation accuracy.
 
