@@ -9,8 +9,8 @@ This tutorial explains how to create an image classifier, using a model pre-trai
 ## Prepare your dataset
 -----
 Here, I will explain how to prepare your image dataset following an existing simple one: Caltech101.
-Caltech101 is a dataset of 101 categories (crocodile, camera, plane, soccer ball...) with 40 to 800 images per category, the image size are different with an average of 200x300 (width=[80;3481] height=[92;3999]).
-To prepare your data, you have to follow this directory architecture:
+Caltech101 is a dataset of 101 categories (crocodile, camera, plane, soccer ball...) with 40 to 800 images per category, the image size are different with an average of 200x300 (width=[80;3481] and height=[92;3999]). More information are available on the Caltech website:  [http://www.vision.caltech.edu/Image_Datasets/Caltech101/].
+To prepare your dataset, you have to follow this directory architecture:
 ```
   * Main_Directory/ # is the directory where the directory name is your dataset name
     * Class1Name/ # is a directory with the name of the class 1
