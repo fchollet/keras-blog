@@ -252,19 +252,19 @@ mymodel.layers[-1].set_previous(pretrained_model.layers[-2])
 ```
 Nothing more!
 
-## Lock some layers for training
-Because ImageNet is a giant dataset compared to Caltech, the VGG16 pretrained model already knows how to recognize the image details  (http://www.cc.gatech.edu/~hays/compvision/proj6/deepNetVis_small.png), but the model must be tuned to the Caltech dataset. A simple way is to freeze all the convolution layers during the training, meaning the weights of the convolutional layers are never updated. If the convolutional layers are not frozen it would quickly cause an overfitting on the Caltech dataset representations. Only the fully connected layers (``Dense``) are updated. But you can easily make some tests by changing the value of: ``unlock_last``. Increasing ``unlock_last`` means: more layers with by updated, decreasing ``unlock_last`` means: less layers are updated.
+## Freeze some layers for training
+Because ImageNet is a giant dataset compared to Caltech, the VGG16 pretrained model already knows how to recognize the image details  (http://www.cc.gatech.edu/~hays/compvision/proj6/deepNetVis_small.png), but the model must be tuned to the Caltech dataset. A simple way is to freeze all the convolution layers during the training, meaning the weights of the convolutional layers are never updated. If the convolutional layers are not frozen it would quickly cause an overfitting on the Caltech dataset representations. Only the fully connected layers (``Dense``) are updated. But you can easily make some tests by changing the value of: ``unfreeze_last``. Increasing ``unfreeze_last`` means: more layers with by updated, decreasing ``unfreeze_last`` means: less layers are updated.
 
 In keras, it's easy! You just need to iterate on mymodel.layers to set ``trainable`` attribute of the layer to False or True:
 
 ```python
-unlock_last = 5
+unfreeze_last = 5
 for num in range(0,len(mymodel.layers)):
   layer = mymodel.layers[num]
-  if num < len(mymodel.layers)-unlock_last:
-    layer.trainable = False # Locked for the Firsts
+  if num < len(mymodel.layers)-unfreeze_last:
+    layer.trainable = False # Freeze for the Firsts
   else:
-    layer.trainable = True # Unlocked for the Lasts
+    layer.trainable = True # Unfreeze for the Lasts
 ```
 ## Compile the model
 Now, the model can be compile with the categorical cross-entropy loss function  (typically of classification model).
