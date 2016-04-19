@@ -129,7 +129,6 @@ def ReadAndNormalizeImage(img_file, dim):
 	im[:,:,1] -= 116.779
 	im[:,:,2] -= 123.68
 	im = im.transpose((2,0,1))
-	#im = np.expand_dims(im, axis=0)
 	return im
 ```
 
@@ -243,14 +242,20 @@ As you can see on the original VGG16 model train on ImageNet, the output number 
 For changing the number of classes of your model, you need to redefine the layer:
 
 ```python
-mymodel.layers[-1] = Dense(101, activation='softmax'))
-```
-and reattached it to the before last layer:
-
-```python
-mymodel.layers[-1].set_previous(pretrained_model.layers[-2])
+del mymodel.layers[-1]
+mymodel.add(Dense(101, activation='softmax'))
 ```
 Nothing more!
+Other possibility is to reduce the fully connected layer sizes, by deleting all the last 5 layers and recreate them.
+```python
+for l in range(0,5):
+  del mymodel.layers[-1]
+mymodel.add(Dense(256, activation='relu'))
+mymodel.add(Dense(0.5))
+mymodel.add(Dense(256, activation='relu'))
+mymodel.add(Dense(0.5))
+mymodel.add(Dense(101, activation='softmax'))
+```
 
 ## Freeze some layers for training
 Because ImageNet is a giant dataset compared to Caltech, the VGG16 pretrained model already knows how to recognize the image details  (http://www.cc.gatech.edu/~hays/compvision/proj6/deepNetVis_small.png), but the model must be tuned to the Caltech dataset. A simple way is to freeze all the convolution layers during the training, meaning the weights of the convolutional layers are never updated. If the convolutional layers are not frozen it would quickly cause an overfitting on the Caltech dataset representations. Only the fully connected layers (``Dense``) are updated. But you can easily make some tests by changing the value of: ``unfreeze_last``. Increasing ``unfreeze_last`` means: more layers with by updated, decreasing ``unfreeze_last`` means: less layers are updated.
