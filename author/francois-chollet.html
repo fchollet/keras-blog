@@ -46,7 +46,357 @@
 
      <section id="content" class="body">
         <aside id="featured"><article>
-                <h1 class="entry-title"><a href="http://blog.keras.io/introducing-keras-10.html">Introducing Keras 1.0</a></h1>
+                <h1 class="entry-title"><a href="http://blog.keras.io/keras-as-a-simplified-interface-to-tensorflow-tutorial.html">Keras as a simplified interface to TensorFlow: tutorial</a></h1>
+<footer class="post-info">
+        <abbr class="published" title="2016-04-24T00:00:00+02:00">
+                Sun 24 April 2016
+        </abbr>
+
+        <address class="vcard author">
+                By <a class="url fn" href="http://blog.keras.io/author/francois-chollet.html">Francois Chollet</a>
+        </address>
+<p>In <a href="http://blog.keras.io/category/tutorials.html">Tutorials</a>. </p>
+</p></footer><!-- /.post-info --><!-- /.post-info -->
+                <h1>A complete guide to using Keras as part of a TensorFlow workflow</h1>
+<p>If TensorFlow is your primary framework, and you are looking for a simple &amp; high-level model definition interface to make your life easier, this tutorial is for you.</p>
+<p>Keras layers and models are fully compatible with pure-TensorFlow tensors, and as a result, Keras makes a great model definition add-on for TensorFlow, and can even be used alongside other TensorFlow libraries. Let's see how.</p>
+<p><strong>Note that this tutorial assumes that you have configured Keras to use the TensorFlow backend (instead of Theano)</strong>. <a href="http://keras.io/backend/#switching-from-one-backend-to-another">Here are instructions on how to do this</a>.</p>
+<p>We will cover the following points:</p>
+<p><a href="/#calling-keras-layers-on-tensorflow-tensors">I: Calling Keras layers on TensorFlow tensors</a></p>
+<p><a href="/#using-keras-models-with-tensorflow">II: Using Keras models with TensorFlow</a></p>
+<p><a href="/#multi-gpu-and-distributed-training">III: Multi-GPU and distributed training</a></p>
+<p><a href="/#exporting-a-model-with-tensorflow-serving">IV: Exporting a model with TensorFlow-serving</a></p>
+<p><img alt="keras+tensorflow" src="/img/keras-tensorflow-logo.jpg" /></p>
+<hr />
+<h2 id="calling-keras-layers-on-tensorflow-tensors">I: Calling Keras layers on TensorFlow tensors</h2>
+
+<p>Let's start with a simple example: MNIST digits classification. We will build a TensorFlow digits classifier using a stack of Keras <code>Dense</code> layers (fully-connected layers).</p>
+<p>We should start by creating a TensorFlow session and registering it with Keras. This means that Keras will use the session we registered to initialize all variables that it creates internally.</p>
+<div class="highlight"><pre><span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+<span class="n">sess</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span>
+
+<span class="kn">from</span> <span class="nn">keras</span> <span class="kn">import</span> <span class="n">backend</span> <span class="k">as</span> <span class="n">K</span>
+<span class="n">K</span><span class="o">.</span><span class="n">set_session</span><span class="p">(</span><span class="n">sess</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Now let's get started with our MNIST model. We can start building a classifier exactly as you would do in TensorFlow:</p>
+<div class="highlight"><pre><span class="c"># this placeholder will contain our input digits, as flat vectors</span>
+<span class="n">img</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="mi">784</span><span class="p">))</span>
+</pre></div>
+
+
+<p>We can then use Keras layers to speed up the model definition process:</p>
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras.layers</span> <span class="kn">import</span> <span class="n">Dense</span>
+
+<span class="c"># Keras layers can be called on TensorFlow tensors:</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">)(</span><span class="n">img</span><span class="p">)</span>  <span class="c"># fully-connected layer with 128 units and ReLU activation</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">preds</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;softmax&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>  <span class="c"># output layer with 10 units and a softmax activation</span>
+</pre></div>
+
+
+<p>We define the placeholder for the labels, and the loss function we will use:</p>
+<div class="highlight"><pre><span class="n">labels</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+
+<span class="kn">from</span> <span class="nn">keras.objectives</span> <span class="kn">import</span> <span class="n">categorical_crossentropy</span>
+<span class="n">loss</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">categorical_crossentropy</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">preds</span><span class="p">))</span>
+</pre></div>
+
+
+<p>Let's train the model with a TensorFlow optimizer:</p>
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">tensorflow.examples.tutorials.mnist</span> <span class="kn">import</span> <span class="n">input_data</span>
+<span class="n">mnist_data</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">read_data_sets</span><span class="p">(</span><span class="s">&#39;MNIST_data&#39;</span><span class="p">,</span> <span class="n">one_hot</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+<span class="n">train_step</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">GradientDescentOptimizer</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span><span class="o">.</span><span class="n">minimize</span><span class="p">(</span><span class="n">loss</span><span class="p">)</span>
+<span class="k">with</span> <span class="n">sess</span><span class="o">.</span><span class="n">as_default</span><span class="p">():</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
+        <span class="n">batch</span> <span class="o">=</span> <span class="n">mnist_data</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">next_batch</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span>
+        <span class="n">train_step</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span><span class="n">img</span><span class="p">:</span> <span class="n">batch</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                  <span class="n">labels</span><span class="p">:</span> <span class="n">batch</span><span class="p">[</span><span class="mi">1</span><span class="p">]})</span>
+</pre></div>
+
+
+<p>We can now evaluate the model:</p>
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras.metrics</span> <span class="kn">import</span> <span class="n">categorical_accuracy</span> <span class="k">as</span> <span class="n">accuracy</span>
+
+<span class="n">acc_value</span> <span class="o">=</span> <span class="n">accuracy</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">preds</span><span class="p">)</span>
+<span class="k">with</span> <span class="n">sess</span><span class="o">.</span><span class="n">as_default</span><span class="p">():</span>
+    <span class="k">print</span> <span class="n">acc_value</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span><span class="n">img</span><span class="p">:</span> <span class="n">mnist_data</span><span class="o">.</span><span class="n">test</span><span class="o">.</span><span class="n">images</span><span class="p">,</span>
+                                    <span class="n">labels</span><span class="p">:</span> <span class="n">mnist_data</span><span class="o">.</span><span class="n">test</span><span class="o">.</span><span class="n">labels</span><span class="p">})</span>
+</pre></div>
+
+
+<p>In this case, we use Keras only as a syntactical shortcut to generate an op that maps some tensor(s) input to some tensor(s) output, and that's it. The optimization is done via a native TensorFlow optimizer rather than a Keras optimizer. We don't even use any Keras <code>Model</code> at all!</p>
+<p>A note on the relative performance of native TensorFlow optimizers and Keras optimizers: there are slight speed differences when optimizing a model "the Keras way" vs. with a TensorFlow optimizer. Somewhat counter-intuitively, Keras seems faster most of the time, by 5-10%. However these differences are small enough that it doesn't really matter, at the end of the day, whether you optimize your models via Keras optimizers or native TF optimizers.</p>
+<h4>Different behaviors during training and testing</h4>
+<p>Some Keras layers (e.g. <code>Dropout</code>, <code>BatchNormalization</code>) behave differently at training time and testing time. You can tell whether a layer uses the "learning phase" (train/test) by printing <code>layer.uses_learning_phase</code>, a boolean: <code>True</code> if the layer has a different behavior in training mode and test mode, <code>False</code> otherwise.</p>
+<p>If your model includes such layers, then you need to specify the value of the learning phase as part of <code>feed_dict</code>, so that your model knows whether to apply dropout/etc or not.</p>
+<p>The Keras learning phase (a scalar TensorFlow tensor) is accessible via the Keras backend:</p>
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras</span> <span class="kn">import</span> <span class="n">backend</span> <span class="k">as</span> <span class="n">K</span>
+<span class="k">print</span> <span class="n">K</span><span class="o">.</span><span class="n">learning_phase</span><span class="p">()</span>
+</pre></div>
+
+
+<p>To make use of the learning phase, simply pass the value "1" (training mode) or "0" (test mode) to <code>feed_dict</code>:</p>
+<div class="highlight"><pre><span class="c"># train mode</span>
+<span class="n">train_step</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span><span class="n">x</span><span class="p">:</span> <span class="n">batch</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">labels</span><span class="p">:</span> <span class="n">batch</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">K</span><span class="o">.</span><span class="n">learning_phase</span><span class="p">():</span> <span class="mi">1</span><span class="p">})</span>
+</pre></div>
+
+
+<p>For instance, here's how to add <code>Dropout</code> layers to our previous MNIST example:</p>
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras.layers</span> <span class="kn">import</span> <span class="n">Dropout</span>
+<span class="kn">from</span> <span class="nn">keras</span> <span class="kn">import</span> <span class="n">backend</span> <span class="k">as</span> <span class="n">K</span>
+
+<span class="n">img</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="mi">784</span><span class="p">))</span>
+<span class="n">labels</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+
+<span class="n">x</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">)(</span><span class="n">img</span><span class="p">)</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">Dropout</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">Dropout</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">preds</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;softmax&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
+
+<span class="n">loss</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">categorical_crossentropy</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">preds</span><span class="p">))</span>
+
+<span class="n">train_step</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">GradientDescentOptimizer</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span><span class="o">.</span><span class="n">minimize</span><span class="p">(</span><span class="n">loss</span><span class="p">)</span>
+<span class="k">with</span> <span class="n">sess</span><span class="o">.</span><span class="n">as_default</span><span class="p">():</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
+        <span class="n">batch</span> <span class="o">=</span> <span class="n">mnist_data</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">next_batch</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span>
+        <span class="n">train_step</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span><span class="n">img</span><span class="p">:</span> <span class="n">batch</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                  <span class="n">labels</span><span class="p">:</span> <span class="n">batch</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                                  <span class="n">K</span><span class="o">.</span><span class="n">learning_phase</span><span class="p">():</span> <span class="mi">1</span><span class="p">})</span>
+
+<span class="n">acc_value</span> <span class="o">=</span> <span class="n">accuracy</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">preds</span><span class="p">)</span>
+<span class="k">with</span> <span class="n">sess</span><span class="o">.</span><span class="n">as_default</span><span class="p">():</span>
+    <span class="k">print</span> <span class="n">acc_value</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span><span class="n">img</span><span class="p">:</span> <span class="n">mnist_data</span><span class="o">.</span><span class="n">test</span><span class="o">.</span><span class="n">images</span><span class="p">,</span>
+                                    <span class="n">labels</span><span class="p">:</span> <span class="n">mnist_data</span><span class="o">.</span><span class="n">test</span><span class="o">.</span><span class="n">labels</span><span class="p">,</span>
+                                    <span class="n">K</span><span class="o">.</span><span class="n">learning_phase</span><span class="p">():</span> <span class="mi">0</span><span class="p">})</span>
+</pre></div>
+
+
+<h4>Compatibility with name scopes, device scopes</h4>
+<p>Keras layers and models are fully compatible with TensorFlow name scopes. For instance, consider the following code snippet:</p>
+<div class="highlight"><pre><span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">64</span><span class="p">))</span>
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">name_scope</span><span class="p">(</span><span class="s">&#39;block1&#39;</span><span class="p">):</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">LSTM</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;mylstm&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
+</pre></div>
+
+
+<p>The weights of our LSTM layer will then be named <code>block1/mylstm_W_i</code>, <code>block1/mylstm_U_i</code>, etc... </p>
+<p>Similarly, device scopes work as you would expect:</p>
+<div class="highlight"><pre><span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s">&#39;/gpu:0&#39;</span><span class="p">):</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">64</span><span class="p">))</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">LSTM</span><span class="p">(</span><span class="mi">32</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>  <span class="c"># all ops / variables in the LSTM layer will live on GPU:0</span>
+</pre></div>
+
+
+<h4>Compatibility with graph scopes</h4>
+<p>Any Keras layer or model that you define inside a TensorFlow graph scope will have all of its variables and operations created as part of the specified graph. For instance, the following works as you would expect:</p>
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras.layers</span> <span class="kn">import</span> <span class="n">LSTM</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="kn">as</span> <span class="nn">tf</span>
+
+<span class="n">my_graph</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Graph</span><span class="p">()</span>
+<span class="k">with</span> <span class="n">my_graph</span><span class="o">.</span><span class="n">as_default</span><span class="p">():</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">64</span><span class="p">))</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">LSTM</span><span class="p">(</span><span class="mi">32</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>  <span class="c"># all ops / variables in the LSTM layer are created as part of our graph</span>
+</pre></div>
+
+
+<h4>Compatibility with variable scopes</h4>
+<p>Variable sharing should be done via calling a same Keras layer (or model) instance multiple times, NOT via TensorFlow variable scopes. A TensorFlow variable scope will have no effect on a Keras layer or model. For more information about weight sharing with Keras, please see <a href="http://keras.io/getting-started/functional-api-guide/#shared-layers">the "weight sharing" section in the functional API guide</a>.</p>
+<p>To summarize quickly how weight sharing works in Keras: by reusing the same layer instance or model instance, you are sharing its weights. Here's a simple example:</p>
+<div class="highlight"><pre><span class="c"># instantiate a Keras layer</span>
+<span class="n">lstm</span> <span class="o">=</span> <span class="n">LSTM</span><span class="p">(</span><span class="mi">32</span><span class="p">)</span>
+
+<span class="c"># instantiate two TF placeholders</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">64</span><span class="p">))</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">64</span><span class="p">))</span>
+
+<span class="c"># encode the two tensors with the *same* LSTM weights</span>
+<span class="n">x_encoded</span> <span class="o">=</span> <span class="n">lstm</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">y_encoded</span> <span class="o">=</span> <span class="n">lstm</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+</pre></div>
+
+
+<h4>Collecting trainable weights and state updates</h4>
+<p>Some Keras layers (stateful RNNs and <code>BatchNormalization</code> layers) have internal updates that need to be run as part of each training step. There are stored as a list of tensor tuples, <code>layer.updates</code>. You should generate <code>assign</code> ops for those, to be run at each training step. Here's an example:</p>
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras.layers</span> <span class="kn">import</span> <span class="n">BatchNormalization</span>
+
+<span class="n">layer</span> <span class="o">=</span> <span class="n">BatchNormalization</span><span class="p">()(</span><span class="n">x</span><span class="p">)</span>
+
+<span class="n">update_ops</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">old_value</span><span class="p">,</span> <span class="n">new_value</span> <span class="ow">in</span> <span class="n">layer</span><span class="o">.</span><span class="n">updates</span><span class="p">:</span>
+    <span class="n">update_ops</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">old_value</span><span class="p">,</span> <span class="n">new_value</span><span class="p">))</span>
+</pre></div>
+
+
+<p>Note that if you are using a Keras model (<code>Model</code> instance or <code>Sequential</code> instance), <code>model.udpates</code> behaves in the same way (and collects the updates of all underlying layers in the model).</p>
+<p>In addition, in case you need to explicitly collect a layer's trainable weights, you can do so via <code>layer.trainable_weights</code> (or <code>model.trainable_weights</code>), a list of TensorFlow <code>Variable</code> instances:</p>
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras.layers</span> <span class="kn">import</span> <span class="n">Dense</span>
+
+<span class="n">layer</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">32</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>  <span class="c"># instantiate and call a layer</span>
+<span class="k">print</span> <span class="n">layer</span><span class="o">.</span><span class="n">trainable_weights</span>  <span class="c"># list of TensorFlow Variables</span>
+</pre></div>
+
+
+<p>Knowing this allows you to implement your own training routine based on a TensorFlow optimizer.</p>
+<hr />
+<h2 id="using-keras-models-with-tensorflow">II: Using Keras models with TensorFlow</h2>
+
+<h4>Converting a Keras <code>Sequential</code> model for use in a TensorFlow workflow</h4>
+<p>You have found a Keras <code>Sequential</code> model that you want to reuse in your TensorFlow project (consider, for instance, <a href="https://gist.github.com/baraldilorenzo/07d7802847aaad0a35d3">this VGG16 image classifier with pre-trained weights</a>). How to proceed?</p>
+<p>First of all, note that if your pre-trained weights include convolutions (layers <code>Convolution2D</code> or <code>Convolution1D</code>) that were trained with <strong>Theano</strong>, you need to flip the convolution kernels when loading the weights. This is due Theano and TensorFlow implementing convolution in different ways (TensorFlow actually implements correlation, much like Caffe). <a href="https://github.com/fchollet/keras/wiki/Converting-convolution-kernels-from-Theano-to-TensorFlow-and-vice-versa">Here's a short guide on what you need to do in this case</a>. </p>
+<p>Let's say that you are starting from the following Keras model, and that you want to modify so that it takes as input a specific TensorFlow tensor, <code>my_input_tensor</code>. This input tensor could be a data feeder op, for instance, or the output of a previous TensorFlow model.</p>
+<div class="highlight"><pre><span class="c"># this is our initial Keras model</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">Sequential</span><span class="p">()</span>
+<span class="n">first_layer</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">input_dim</span><span class="o">=</span><span class="mi">784</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Dense</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;softmax&#39;</span><span class="p">))</span>
+</pre></div>
+
+
+<p>You just need to use <code>set_input</code> to modify the input of the first layer right after you instantiate it, then build the rest of the model on top:</p>
+<div class="highlight"><pre><span class="c"># this is our modified Keras model</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">Sequential</span><span class="p">()</span>
+<span class="n">first_layer</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">input_dim</span><span class="o">=</span><span class="mi">784</span><span class="p">)</span>
+<span class="n">first_layer</span><span class="o">.</span><span class="n">set_input</span><span class="p">(</span><span class="n">my_input_tensor</span><span class="p">)</span>
+
+<span class="c"># build the rest of the model as before</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">first_layer</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Dense</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;softmax&#39;</span><span class="p">))</span>
+</pre></div>
+
+
+<p>At this stage, you can call <code>model.load_weights(weights_file)</code> to load your pre-trained weights.</p>
+<p>Then you will probably want to collect the <code>Sequential</code> model's output tensor:</p>
+<div class="highlight"><pre><span class="n">output_tensor</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">output</span>
+</pre></div>
+
+
+<p>You can now add new TensorFlow ops on top of <code>output_tensor</code>, etc.</p>
+<h4>Calling a Keras model on a TensorFlow tensor</h4>
+<p>A Keras model acts the same as a layer, and thus can be called on TensorFlow tensors:</p>
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras.models</span> <span class="kn">import</span> <span class="n">Sequential</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">Sequential</span><span class="p">()</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Dense</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">input_dim</span><span class="o">=</span><span class="mi">784</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Dense</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;softmax&#39;</span><span class="p">))</span>
+
+<span class="c"># this works! </span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="mi">784</span><span class="p">))</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Note: by calling a Keras model, your are reusing both its architecture and its weights. When you are calling a model on a tensor, you are creating new TF ops on top of the input tensor, and these ops are reusing the TF <code>Variable</code> instances already present in the model.</p>
+<hr />
+<h2 id="multi-gpu-and-distributed-training">III: Multi-GPU and distributed training</h2>
+
+<h4>Assigning part of a Keras model to different GPUs</h4>
+<p>TensorFlow device scopes are fully compatible with Keras layers and models, hence you can use them to assign specific parts of a graph to different GPUs. Here's a simple example:</p>
+<div class="highlight"><pre><span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s">&#39;/gpu:0&#39;</span><span class="p">):</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">64</span><span class="p">))</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">LSTM</span><span class="p">(</span><span class="mi">32</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>  <span class="c"># all ops in the LSTM layer will live on GPU:0</span>
+
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s">&#39;/gpu:1&#39;</span><span class="p">):</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">64</span><span class="p">))</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">LSTM</span><span class="p">(</span><span class="mi">32</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>  <span class="c"># all ops in the LSTM layer will live on GPU:1</span>
+</pre></div>
+
+
+<p>Note that the variables created by the LSTM layers will not live on GPU: all TensorFlow variables always live on CPU independently from the device scope where they were created. TensorFlow handles device-to-device variable transfer behind the scenes.</p>
+<p>If you want to train multiple replicas of a same model on different GPUs, while sharing the same weights across the different replicas, you should first instantiate your model (or layers) under one device scope, then call the same model instance multiple times in different GPU device scopes, such as:</p>
+<div class="highlight"><pre><span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s">&#39;/cpu:0&#39;</span><span class="p">):</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="mi">784</span><span class="p">))</span>
+
+    <span class="c"># shared model living on CPU:0</span>
+    <span class="c"># it won&#39;t actually be run during training; it acts as an op template</span>
+    <span class="c"># and as a repository for shared variables</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Sequential</span><span class="p">()</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Dense</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">input_dim</span><span class="o">=</span><span class="mi">784</span><span class="p">))</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Dense</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;softmax&#39;</span><span class="p">))</span>
+
+<span class="c"># replica 0</span>
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s">&#39;/gpu:0&#39;</span><span class="p">):</span>
+    <span class="n">output_0</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>  <span class="c"># all ops in the replica will live on GPU:0</span>
+
+<span class="c"># replica 1</span>
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s">&#39;/gpu:1&#39;</span><span class="p">):</span>
+    <span class="n">output_1</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>  <span class="c"># all ops in the replica will live on GPU:1</span>
+
+<span class="c"># merge outputs on CPU</span>
+<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s">&#39;/cpu:0&#39;</span><span class="p">):</span>
+    <span class="n">preds</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">output_0</span> <span class="o">+</span> <span class="n">output_1</span><span class="p">)</span>
+
+<span class="c"># we only run the `preds` tensor, so that only the two</span>
+<span class="c"># replicas on GPU get run (plus the merge op on CPU)</span>
+<span class="n">output_value</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="n">preds</span><span class="p">],</span> <span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span><span class="n">x</span><span class="p">:</span> <span class="n">data</span><span class="p">})</span>
+</pre></div>
+
+
+<h4>Distributed training</h4>
+<p>You can trivially make use of TensorFlow distributed training by registering with Keras a TF session linked to a cluster:</p>
+<div class="highlight"><pre><span class="n">server</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Server</span><span class="o">.</span><span class="n">create_local_server</span><span class="p">()</span>
+<span class="n">sess</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">(</span><span class="n">server</span><span class="o">.</span><span class="n">target</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">keras</span> <span class="kn">import</span> <span class="n">backend</span> <span class="k">as</span> <span class="n">K</span>
+<span class="n">K</span><span class="o">.</span><span class="n">set_session</span><span class="p">(</span><span class="n">sess</span><span class="p">)</span>
+</pre></div>
+
+
+<p>For more information about using TensorFlow in a distributed setting, see <a href="https://www.tensorflow.org/versions/r0.8/how_tos/distributed/index.html">this tutorial</a>.</p>
+<hr />
+<h2 id="exporting-a-model-with-tensorflow-serving">IV: Exporting a model with TensorFlow-serving</h2>
+
+<p><a href="https://github.com/tensorflow/serving">TensorFlow Serving</a> is a library for serving TensorFlow models in a production setting, developed by Google.</p>
+<p>Any Keras model can be exported with TensorFlow-serving (as long as it only has one input and one output, which is a limitation of TF-serving), whether or not it was training as part of a TensorFlow workflow. In fact you could even train your Keras model with Theano then switch to the TensorFlow Keras backend and export your model.</p>
+<p>Here's how it works.</p>
+<p>If your graph makes use of the Keras learning phase (different behavior at training time and test time), the very first thing to do before exporting your model is to hard-code the value of the learning phase (as 0, presumably, i.e. test mode) into your graph. This is done by 1) registering a constant learning phase with the Keras backend, and 2) re-building your model afterwards.</p>
+<p>Here are these two simple steps in action:</p>
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras</span> <span class="kn">import</span> <span class="n">backend</span> <span class="k">as</span> <span class="n">K</span>
+
+<span class="n">K</span><span class="o">.</span><span class="n">set_learning_phase</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>  <span class="c"># all new operations will be in test mode from now on</span>
+
+<span class="c"># serialize the model and get its weights, for quick re-building</span>
+<span class="n">config</span> <span class="o">=</span> <span class="n">previous_model</span><span class="o">.</span><span class="n">get_config</span><span class="p">()</span>
+<span class="n">weights</span> <span class="o">=</span> <span class="n">previous_model</span><span class="o">.</span><span class="n">get_weights</span><span class="p">()</span>
+
+<span class="c"># re-build a model where the learning phase is now hard-coded to 0</span>
+<span class="kn">from</span> <span class="nn">keras.models</span> <span class="kn">import</span> <span class="n">model_from_config</span>
+<span class="n">new_model</span> <span class="o">=</span> <span class="n">model_from_config</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+<span class="n">new_model</span><span class="o">.</span><span class="n">set_weights</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+</pre></div>
+
+
+<p>We can now use TensorFlow-serving to export the model, following the instructions found in <a href="https://github.com/tensorflow/serving/blob/master/tensorflow_serving/g3doc/serving_basic.md">the official tutorial</a>:</p>
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">tensorflow_serving.session_bundle</span> <span class="kn">import</span> <span class="n">exporter</span>
+
+<span class="n">export_path</span> <span class="o">=</span> <span class="o">...</span> <span class="c"># where to save the exported graph</span>
+<span class="n">export_version</span> <span class="o">=</span> <span class="o">...</span> <span class="c"># version number (integer)</span>
+
+<span class="n">saver</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Saver</span><span class="p">(</span><span class="n">sharded</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">model_exporter</span> <span class="o">=</span> <span class="n">exporter</span><span class="o">.</span><span class="n">Exporter</span><span class="p">(</span><span class="n">saver</span><span class="p">)</span>
+<span class="n">signature</span> <span class="o">=</span> <span class="n">exporter</span><span class="o">.</span><span class="n">classification_signature</span><span class="p">(</span><span class="n">input_tensor</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">input</span><span class="p">,</span>
+                                              <span class="n">scores_tensor</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">output</span><span class="p">)</span>
+<span class="n">model_exporter</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">sess</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">as_graph_def</span><span class="p">(),</span>
+                    <span class="n">default_graph_signature</span><span class="o">=</span><span class="n">signature</span><span class="p">)</span>
+<span class="n">model_exporter</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="n">export_path</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="n">export_version</span><span class="p">),</span> <span class="n">sess</span><span class="p">)</span>
+</pre></div>
+
+
+<hr />
+<p>Want to see a new topic covered in this guide? <a href="https://twitter.com/fchollet">Reach out on Twitter</a>.</p>
+<hr />
+        </article></aside><!-- /#featured -->
+                <h1>Other articles</h1>
+                <hr />
+                    <ol id="posts-list" class="hfeed">
+        <li><article class="hentry">
+                <header>
+                        <h1><a href="http://blog.keras.io/introducing-keras-10.html" rel="bookmark" title="Permalink to Introducing Keras 1.0">Introducing Keras 1.0</a></h1>
+                </header>
+
+                <div class="entry-content">
 <footer class="post-info">
         <abbr class="published" title="2016-04-11T00:00:00+02:00">
                 Mon 11 April 2016
@@ -58,48 +408,10 @@
 <p>In <a href="http://blog.keras.io/category/news.html">News</a>. </p>
 </p></footer><!-- /.post-info --><!-- /.post-info -->
                 <p>Keras was initially released a year ago, late March 2015. It has made tremendous progress since, both on the development front, and as a community.</p>
-<p>But continuous improvement isn't enough. A year of developing Keras, using Keras, and getting feedback from thousands of users has taught us a lot. To the point that we are now able to redesign it better than we could have the first time around.</p>
-<p>And so today we are releasing Keras 1.0. It isn't a patch on top of the previous version, it is actually a re-writing of Keras nearly from scratch. It maintains backwards compatibility while introducing a series of major features, made possible by a better design under the hood.</p>
-<p>Simplicity and accessibility have always been the targets guiding the Keras development efforts. The purpose of Keras is to make deep learning accessible to as many people as possible, by providing a set of "Lego blocks" for building Deep Learning models in a fast and simple way. Keras 1.0 pushes even further in that same direction.</p>
-<p>The most significant feature introduced today is the functional API, a new way to define your Keras models. Get started with the functional API with <a href="http://keras.io/getting-started/functional-api-guide/">this short guide</a>. If you are new to Keras, first read the <a href="http://keras.io/#getting-started-30-seconds-to-keras">"30 seconds to Keras" introduction</a>, then read <a href="http://keras.io/getting-started/sequential-model-guide/">this overview of the Sequential model</a>.</p>
-<h2>New features</h2>
-<ul>
-<li>
-<p>The functional API: a simpler and more powerful way to define complex deep learning models.</p>
-</li>
-<li>
-<p>Better performance. Compilation times are lower. All RNNs now come in 2 different implementations to choose from, allowing you to get maximum performance across widely different tasks and setups. And Theano RNNs can now be unrolled, yielding up to a 25% speed-up.</p>
-</li>
-<li>
-<p>Modular metrics. You can know monitor arbitrary lists of metrics on arbitrary endpoints of your Keras models.</p>
-</li>
-<li>
-<p>An even better user experience. The code has been rewritten from scratch with the end user in mind at all stages. A great library UX has two components: simple, intuitive APIs (the kind that are easy to memorize), and the ability to return sensible, easy to grok error messages whenever faced with a user error.</p>
-</li>
-<li>
-<p>Improved Lambda layers.</p>
-</li>
-</ul>
-<p>...and much more.</p>
-<h2>Installation</h2>
-<p>You can install the new version from PyPI:</p>
-<div class="highlight"><pre>pip install keras --upgrade
-</pre></div>
-
-
-<p>Or from the master branch on GitHub:</p>
-<div class="highlight"><pre>git clone https://github.com/fchollet/keras.git
-<span class="nb">cd </span>keras
-python setup.py install
-</pre></div>
-
-
-<h2>Porting custom Keras layers</h2>
-<p>Because the Keras internals have changed, custom Keras layers will not work with the new version. However you can port them to the new version in just a minute. Simply follow the instructions in <a href="https://github.com/fchollet/keras/wiki/Porting-your-custom-layers-from-Keras-0.3-to-Keras-1.0">this guide</a>.</p>
-        </article></aside><!-- /#featured -->
-                <h1>Other articles</h1>
-                <hr />
-                    <ol id="posts-list" class="hfeed">
+<p>But continuous improvement isn't enough. A year of developing Keras, using Keras, and getting feedback from thousands of users has taught us a lot ...</p>
+                <a class="readmore" href="http://blog.keras.io/introducing-keras-10.html">read more</a>
+                </div><!-- /.entry-content -->
+        </article></li>
         <li><article class="hentry">
                 <header>
                         <h1><a href="http://blog.keras.io/how-convolutional-neural-networks-see-the-world.html" rel="bookmark" title="Permalink to How convolutional neural networks see the world">How convolutional neural networks see the world</a></h1>
