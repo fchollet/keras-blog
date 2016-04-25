@@ -1,4 +1,4 @@
-Title: Keras as a simplified interface to TensorFlow
+Title: Keras as a simplified interface to TensorFlow: tutorial
 Date: 2016-04-24
 Category: Tutorials
 Author: Francois Chollet
