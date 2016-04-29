@@ -21,15 +21,14 @@ from keras.layers import Convolution2D, ZeroPadding2D, MaxPooling2D
 
 img_width, img_height = 128, 128
 
-# this will contain our generated images
-input_img = K.placeholder((1, 3, img_width, img_height))
-
-# build the VGG16 network with our input_img as input
-first_layer = ZeroPadding2D((1, 1), input_shape=(3, img_width, img_height))
-first_layer.input = input_img
-
+# build the VGG16 network
 model = Sequential()
-model.add(first_layer)
+model.add(ZeroPadding2D((1, 1), batch_input_shape=(1, 3, img_width, img_height)))
+first_layer = model.layers[-1]
+# this is a placeholder tensor that will contain our generated images
+input_img = first_layer.input
+
+# build the rest of the network
 model.add(Convolution2D(64, 3, 3, activation='relu', name='conv1_1'))
 model.add(ZeroPadding2D((1, 1)))
 model.add(Convolution2D(64, 3, 3, activation='relu', name='conv1_2'))
@@ -99,7 +98,7 @@ filter_index = 0  # can be any integer from 0 to 511, as there are 512 filters i
 
 # build a loss function that maximizes the activation
 # of the nth filter of the layer considered
-layer_output = layer_dict[layer_name].get_output()
+layer_output = layer_dict[layer_name].output
 loss = K.mean(layer_output[:, filter_index, :, :])
 
 # compute the gradient of the input picture wrt this loss
