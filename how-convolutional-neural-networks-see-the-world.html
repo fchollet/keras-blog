@@ -70,15 +70,14 @@
 
 <span class="n">img_width</span><span class="p">,</span> <span class="n">img_height</span> <span class="o">=</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">128</span>
 
-<span class="c"># this will contain our generated images</span>
-<span class="n">input_img</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">placeholder</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">img_width</span><span class="p">,</span> <span class="n">img_height</span><span class="p">))</span>
-
-<span class="c"># build the VGG16 network with our input_img as input</span>
-<span class="n">first_layer</span> <span class="o">=</span> <span class="n">ZeroPadding2D</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">input_shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">img_width</span><span class="p">,</span> <span class="n">img_height</span><span class="p">))</span>
-<span class="n">first_layer</span><span class="o">.</span><span class="n">input</span> <span class="o">=</span> <span class="n">input_img</span>
-
+<span class="c"># build the VGG16 network</span>
 <span class="n">model</span> <span class="o">=</span> <span class="n">Sequential</span><span class="p">()</span>
-<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">first_layer</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">ZeroPadding2D</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">batch_input_shape</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">img_width</span><span class="p">,</span> <span class="n">img_height</span><span class="p">)))</span>
+<span class="n">first_layer</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<span class="c"># this is a placeholder tensor that will contain our generated images</span>
+<span class="n">input_img</span> <span class="o">=</span> <span class="n">first_layer</span><span class="o">.</span><span class="n">input</span>
+
+<span class="c"># build the rest of the network</span>
 <span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Convolution2D</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;conv1_1&#39;</span><span class="p">))</span>
 <span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">ZeroPadding2D</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
 <span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Convolution2D</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;conv1_2&#39;</span><span class="p">))</span>
@@ -146,7 +145,7 @@
 
 <span class="c"># build a loss function that maximizes the activation</span>
 <span class="c"># of the nth filter of the layer considered</span>
-<span class="n">layer_output</span> <span class="o">=</span> <span class="n">layer_dict</span><span class="p">[</span><span class="n">layer_name</span><span class="p">]</span><span class="o">.</span><span class="n">get_output</span><span class="p">()</span>
+<span class="n">layer_output</span> <span class="o">=</span> <span class="n">layer_dict</span><span class="p">[</span><span class="n">layer_name</span><span class="p">]</span><span class="o">.</span><span class="n">output</span>
 <span class="n">loss</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">layer_output</span><span class="p">[:,</span> <span class="n">filter_index</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span>
 
 <span class="c"># compute the gradient of the input picture wrt this loss</span>
