@@ -411,11 +411,11 @@ autoencoder.compile(optimizer='adadelta', loss='binary_crossentropy')
 Let's train it for 100 epochs:
 
 ```python
-autoencoder.fit(x_train, x_train,
+autoencoder.fit(x_train_noisy, x_train,
                 nb_epoch=100,
                 batch_size=128,
                 shuffle=True,
-                validation_data=(x_test, x_test),
+                validation_data=(x_test_noisy, x_test),
                 callbacks=[TensorBoard(log_dir='/tmp/tb', histogram_freq=0, write_graph=False)])
 ```
 
