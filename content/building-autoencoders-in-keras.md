@@ -5,7 +5,7 @@ Author: Francois Chollet
 
 In this tutorial, we will answer some common questions about autoencoders, and we will cover code examples of the following models:
 
-- a simple autoencoder encoder based on a fully-connected layer
+- a simple autoencoder based on a fully-connected layer
 - a sparse autoencoder
 - a deep fully-connected autoencoder
 - a deep convolutional autoencoder
