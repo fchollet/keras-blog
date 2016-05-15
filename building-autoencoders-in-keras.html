@@ -401,11 +401,11 @@
 
 
 <p>Let's train it for 100 epochs:</p>
-<div class="highlight"><pre><span class="n">autoencoder</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="n">x_train</span><span class="p">,</span>
+<div class="highlight"><pre><span class="n">autoencoder</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">x_train_noisy</span><span class="p">,</span> <span class="n">x_train</span><span class="p">,</span>
                 <span class="n">nb_epoch</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
                 <span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
                 <span class="n">shuffle</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
-                <span class="n">validation_data</span><span class="o">=</span><span class="p">(</span><span class="n">x_test</span><span class="p">,</span> <span class="n">x_test</span><span class="p">),</span>
+                <span class="n">validation_data</span><span class="o">=</span><span class="p">(</span><span class="n">x_test_noisy</span><span class="p">,</span> <span class="n">x_test</span><span class="p">),</span>
                 <span class="n">callbacks</span><span class="o">=</span><span class="p">[</span><span class="n">TensorBoard</span><span class="p">(</span><span class="n">log_dir</span><span class="o">=</span><span class="s">&#39;/tmp/tb&#39;</span><span class="p">,</span> <span class="n">histogram_freq</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">write_graph</span><span class="o">=</span><span class="bp">False</span><span class="p">)])</span>
 </pre></div>
 
