@@ -46,7 +46,403 @@
 
      <section id="content" class="body">
         <aside id="featured"><article>
-                <h1 class="entry-title"><a href="http://blog.keras.io/building-autoencoders-in-keras.html">Building Autoencoders in Keras</a></h1>
+                <h1 class="entry-title"><a href="http://blog.keras.io/building-powerful-image-classification-models-using-very-little-data.html">Building powerful image classification models using very little data</a></h1>
+<footer class="post-info">
+        <abbr class="published" title="2016-06-05T00:00:00+02:00">
+                Sun 05 June 2016
+        </abbr>
+
+        <address class="vcard author">
+                By <a class="url fn" href="http://blog.keras.io/author/francois-chollet.html">Francois Chollet</a>
+        </address>
+<p>In <a href="http://blog.keras.io/category/tutorials.html">Tutorials</a>. </p>
+</p></footer><!-- /.post-info --><!-- /.post-info -->
+                <p>In this tutorial, we will present a few simple yet effective methods that you can use to build a powerful image classifier, using only very few training examples --just a few hundred or thousand pictures from each class you want to be able to recognize. </p>
+<p>We will go over the following options:</p>
+<ul>
+<li>training a small network from scratch (as a baseline)</li>
+<li>using the bottleneck features of a pre-trained network</li>
+<li>fine-tuning the top layers of a pre-trained network</li>
+</ul>
+<p>This will lead us to cover the following Keras features:</p>
+<ul>
+<li><code>fit_generator</code> for training Keras a model using Python data generators</li>
+<li><code>ImageDataGenerator</code> for real-time data augmentation</li>
+<li>layer freezing and model fine-tuning</li>
+<li>...and more.</li>
+</ul>
+<hr />
+<h2>Our setup: only 2000 training examples (1000 per class)</h2>
+<p>We will start from the following setup:</p>
+<ul>
+<li>a machine with Keras, SciPy, PIL installed. If you have a NVIDIA GPU that you can use (and cuDNN installed), that's great, but since we are working with few images that isn't strictly necessary. <em>Note that since this tutorial makes use of Keras features in introduced in version 1.0.4, <strong>you should update Keras before starting</strong>.</em></li>
+<li>a training data directory and validation data directory containing one subdirectory per image class, filled with .png or .jpg images:</li>
+</ul>
+<div class="highlight"><pre>data/
+    train/
+        dogs/
+            dog001.jpg
+            dog002.jpg
+            ...
+        cats/
+            cat001.jpg
+            cat002.jpg
+            ...
+    validation/
+        dogs/
+            dog001.jpg
+            dog002.jpg
+            ...
+        cats/
+            cat001.jpg
+            cat002.jpg
+            ...
+</pre></div>
+
+
+<p>To acquire a few hundreds or thousands of training images belonging to the classes you are interested in, one possibility would be to use the <a href="https://www.flickr.com/services/api/">Flickr API</a> to download pictures matching a given tag, under a friendly license.</p>
+<p>In our examples we will use two sets of pictures, which we got <a href="https://www.kaggle.com/c/dogs-vs-cats/data">from Kaggle</a>: 1000 cats and 1000 dogs (although the original dataset had 12,500 cats and 12,500 dogs, we just took the first 1000 images for each class). We also use 400 additional samples from each class as validation data, to evaluate our models.</p>
+<p>That is very few examples to learn from, for a classification problem that is far from simple. So this is a challenging machine learning problem, but it is also a realistic one: in a lot of real-world use cases, even small-scale data collection can be extremely expensive or sometimes near-impossible (e.g. in medical imaging). Being able to make the most out of very little data is a key skill of a competent data scientist.</p>
+<p><img alt="cats and dogs" src="/img/imgclf/cats_and_dogs.png" /></p>
+<p>How difficult is this problem? When Kaggle started the cats vs. dogs competition (with 25,000 training images in total), a bit over two years ago, it came with the following statement:</p>
+<p><em>"In an informal poll conducted many years ago, computer vision experts posited that a classifier with better than 60% accuracy would be difficult without a major advance in the state of the art. For reference, a 60% classifier improves the guessing probability of a 12-image HIP from 1/4096 to 1/459.
+The current literature suggests machine classifiers can score above 80% accuracy on this task <a href="http://xenon.stanford.edu/~pgolle/papers/dogcat.pdf">[ref]</a>."</em></p>
+<p>In the resulting competition, top entrants were able to score over 98% accuracy by using modern deep learning techniques. In our case, because we restrict ourselves to only 8% of the dataset, the problem is much harder.</p>
+<h2>On the relevance of deep learning for small-data problems</h2>
+<p>A message that I hear often is that "deep learning is only relevant when you have a huge amount of data". While not entirely incorrect, this is somewhat misleading. Certainly, deep learning requires the ability to learn features automatically from the data, which is generally only possible when lots of training data is available --especially for problems where the input samples are very high-dimensional, like images. However, convolutional neural networks --a pillar algorithm of deep learning-- are by design one of the best models available for most "perceptual" problems (such as image classification), even with very little data to learn from. Training a convnet from scratch on a small image dataset will still yield reasonable results, without the need for any custom feature engineering. Convnets are just plain good. They are the right tool for the job.</p>
+<p>But what's more, deep learning models are by nature highly repurposable: you can take, say, an image classification or speech-to-text model trained on a large-scale dataset then reuse it on a significantly different problem with only minor changes, as we will see in this post. Specifically in the case of computer vision, many pre-trained models (usually trained on the ImageNet dataset) are now publicly available for download and can be used to bootstrap powerful vision models out of very little data.</p>
+<hr />
+<h2>Data pre-processing and data augmentation</h2>
+<p>In order to make the most of our few training examples, we will "augment" them via a number of random transformations, so that our model would never see twice the exact same picture. This helps prevent overfitting and helps the model generalize better.</p>
+<p>In Keras this can be done via the <code>keras.preprocessing.image.ImageDataGenerator</code> class. This class allows you to:</p>
+<ul>
+<li>configure random transformations and normalization operations to be done on your image data during training</li>
+<li>instantiate generators of augmented image batches (and their labels) via <code>.flow(data, labels)</code> or <code>.flow_from_directory(directory)</code>. These generators can then be used with the Keras model methods that accept data generators as inputs, <code>fit_generator</code>, <code>evaluate_generator</code> and <code>predict_generator</code>.</li>
+</ul>
+<p>Let's look at an example right away:</p>
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras.preprocessing.image</span> <span class="kn">import</span> <span class="n">ImageDataGenerator</span>
+
+<span class="n">datagen</span> <span class="o">=</span> <span class="n">ImageDataGenerator</span><span class="p">(</span>
+        <span class="n">rotation_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">width_shift_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">height_shift_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">rescale</span><span class="o">=</span><span class="mf">1.</span><span class="o">/</span><span class="mi">255</span><span class="p">,</span>
+        <span class="n">shear_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">zoom_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">horizontal_flip</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+        <span class="n">fill_mode</span><span class="o">=</span><span class="s">&#39;nearest&#39;</span><span class="p">)</span>
+</pre></div>
+
+
+<p>These are just a few of the options available (for more, see <a href="http://keras.io/preprocessing/image/">the documentation</a>). Let's quickly go over what we just wrote:</p>
+<ul>
+<li><code>rotation_range</code> is a value in degrees (0-180), a range within which to randomly rotate pictures</li>
+<li><code>width_shift</code> and <code>height_shift</code> are ranges (as a fraction of total width or height) within which to randomly translate pictures vertically or horizontally</li>
+<li><code>rescale</code> is a value by which we will multiply the data before any other processing. Our original images consist in RGB coefficients in the 0-255, but such values would be too high for our models to process (given a typical learning rate), so we target values between 0 and 1 instead by scaling with a 1/255. factor.</li>
+<li><code>shear_range</code> is for randomly applying <a href="https://en.wikipedia.org/wiki/Shear_mapping">shearing transformations</a></li>
+<li><code>zoom_range</code> is for randomly zooming inside pictures</li>
+<li><code>horizontal_flip</code> is for randomly flipping half of the images horizontally --relevant when there are no assumptions of horizontal assymetry (e.g. real-world pictures).</li>
+<li><code>fill_mode</code> is the strategy used for filling in newly created pixels, which can appear after a rotation or a width/height shift.</li>
+</ul>
+<p>Now let's start generating some pictures using this tool and save them to a temporary directory, so we can get a feel for what our augmentation strategy is doing --we disable rescaling in this case to keep the images displayable:</p>
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras.preprocessing.image</span> <span class="kn">import</span> <span class="n">ImageDataGenerator</span><span class="p">,</span> <span class="n">array_to_img</span><span class="p">,</span> <span class="n">img_to_array</span><span class="p">,</span> <span class="n">load_img</span>
+
+<span class="n">datagen</span> <span class="o">=</span> <span class="n">ImageDataGenerator</span><span class="p">(</span>
+        <span class="n">rotation_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">width_shift_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">height_shift_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">shear_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">zoom_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">horizontal_flip</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+        <span class="n">fill_mode</span><span class="o">=</span><span class="s">&#39;nearest&#39;</span><span class="p">)</span>
+
+<span class="n">img</span> <span class="o">=</span> <span class="n">load_img</span><span class="p">(</span><span class="s">&#39;data/train/cats/cat.0.jpg&#39;</span><span class="p">)</span>  <span class="c"># this is a PIL image</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">img_to_array</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>  <span class="c"># this is a Numpy array with shape (3, 150, 150)</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">1</span><span class="p">,)</span> <span class="o">+</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>  <span class="c"># this is a Numpy array with shape (1, 3, 150, 150)</span>
+
+<span class="c"># the .flow() command below generates batches of randomly transformed images</span>
+<span class="c"># and saves the results to the `preview/` directory</span>
+<span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">datagen</span><span class="o">.</span><span class="n">flow</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                          <span class="n">save_to_dir</span><span class="o">=</span><span class="s">&#39;preview&#39;</span><span class="p">,</span> <span class="n">save_prefix</span><span class="o">=</span><span class="s">&#39;cat&#39;</span><span class="p">,</span> <span class="n">save_format</span><span class="o">=</span><span class="s">&#39;jpeg&#39;</span><span class="p">):</span>
+    <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">20</span><span class="p">:</span>
+        <span class="k">break</span>  <span class="c"># otherwise the generator would loop indefinitely</span>
+</pre></div>
+
+
+<p>Here's what we get --this is what our data augmentation strategy looks like.</p>
+<p><img alt="cat data augmentation" src="/img/imgclf/cat_data_augmentation.png" /></p>
+<hr />
+<h2>Training a small convnet from scratch: 80% accuracy in 40 lines of code</h2>
+<p>The right tool for an image classification job is a convnet, so let's try to train one on our data, as an initial baseline. Since we only have few examples, our number one concern should be <strong>overfitting</strong>. Overfitting happens when a model exposed to too few examples learns patterns that do not generalize to new data, i.e. when the model starts using irrelevant features for making predictions. For instance, if you, as a human, only see three images of people who are lumberjacks, and three, images of people who are sailors, and among them only one lumberjack wears a cap, you might start thinking that wearing a cap is a sign of being a lumberjack as opposed to a sailor. You would then make a pretty lousy lumberjack/sailor classifier.</p>
+<p>Data augmentation is one way to fight overfitting, but it isn't enough since our augmented samples are still highly correlated. Your main focus for fighting overfitting should be the entropic capacity of your model --how much information your model is allowed to store. A model that can store a lot of information has the potential to be more accurate by leveraging more features, but it is also more at risk to start storing irrelevant features. Meanwhile, a model that can only store a few features will have to focus on the most significant features found in the data, and these are more likely to be truly relevant and to generalize better.</p>
+<p>There are different ways to modulate entropic capacity. The main one is the choice of the number of parameters in your model, i.e. the number of layers and the size of each layer. Another way is the use of weight regularization, such as L1 or L2 regularization, which consists in forcing model weights to taker smaller values.</p>
+<p>In our case we will use a very small convnet with few layers and few filters per layer, alongside data augmentation and dropout. Dropout also helps reduce overfitting, by preventing a layer from seeing twice the exact same pattern, thus acting in a way analoguous to data augmentation (you could say that both dropout and data augmentation tend to disrupt random correlations occuring in your data).</p>
+<p>The code snippet below is our first model, a simple stack of 3 convolution layers with a ReLU activation and followed by max-pooling layers. This is very similar to the architectures that Yann LeCun advocated in the 1990s for image classification (with the exception of ReLU).</p>
+<p>The full code for this experiment can be found <a href="https://gist.github.com/fchollet/0830affa1f7f19fd47b06d4cf89ed44d">here</a>.</p>
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras.models</span> <span class="kn">import</span> <span class="n">Sequential</span>
+<span class="kn">from</span> <span class="nn">keras.layers</span> <span class="kn">import</span> <span class="n">Convolution2D</span><span class="p">,</span> <span class="n">MaxPooling2D</span>
+<span class="kn">from</span> <span class="nn">keras.layers</span> <span class="kn">import</span> <span class="n">Activation</span><span class="p">,</span> <span class="n">Dropout</span><span class="p">,</span> <span class="n">Flatten</span><span class="p">,</span> <span class="n">Dense</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">Sequential</span><span class="p">()</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Convolution2D</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">input_shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">150</span><span class="p">,</span> <span class="mi">150</span><span class="p">)))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Activation</span><span class="p">(</span><span class="s">&#39;relu&#39;</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">MaxPooling2D</span><span class="p">(</span><span class="n">pool_size</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)))</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Convolution2D</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Activation</span><span class="p">(</span><span class="s">&#39;relu&#39;</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">MaxPooling2D</span><span class="p">(</span><span class="n">pool_size</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)))</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Convolution2D</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Activation</span><span class="p">(</span><span class="s">&#39;relu&#39;</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">MaxPooling2D</span><span class="p">(</span><span class="n">pool_size</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)))</span>
+
+<span class="c"># the model so far outputs 3D feature maps (height, width, features)</span>
+</pre></div>
+
+
+<p>On top of it we stick two fully-connected layers. We end the model with a single unit and a sigmoid activation, which is perfect for a binary classification. To go with it we will also use the <code>binary_crossentropy</code> loss to train our model.</p>
+<div class="highlight"><pre><span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Flatten</span><span class="p">())</span>  <span class="c"># this converts our 3D feature maps to 1D feature vectors</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Dense</span><span class="p">(</span><span class="mi">64</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Activation</span><span class="p">(</span><span class="s">&#39;relu&#39;</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Dropout</span><span class="p">(</span><span class="mf">0.5</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Dense</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Activation</span><span class="p">(</span><span class="s">&#39;sigmoid&#39;</span><span class="p">))</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="s">&#39;binary_crossentropy&#39;</span><span class="p">,</span>
+              <span class="n">optimizer</span><span class="o">=</span><span class="s">&#39;rmsprop&#39;</span><span class="p">,</span>
+              <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;accuracy&#39;</span><span class="p">])</span>
+</pre></div>
+
+
+<p>Let's prepare our data. We will use <code>.flow_from_directory()</code> to generate batches of image data (and their labels) directly from our jpgs in their respective folders.</p>
+<div class="highlight"><pre><span class="c"># this is the augmentation configuration we will use for training</span>
+<span class="n">train_datagen</span> <span class="o">=</span> <span class="n">ImageDataGenerator</span><span class="p">(</span>
+        <span class="n">rescale</span><span class="o">=</span><span class="mf">1.</span><span class="o">/</span><span class="mi">255</span><span class="p">,</span>
+        <span class="n">shear_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">zoom_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">horizontal_flip</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+<span class="c"># this is the augmentation configuration we will use for testing:</span>
+<span class="c"># only rescaling</span>
+<span class="n">test_datagen</span> <span class="o">=</span> <span class="n">ImageDataGenerator</span><span class="p">(</span><span class="n">rescale</span><span class="o">=</span><span class="mf">1.</span><span class="o">/</span><span class="mi">255</span><span class="p">)</span>
+
+<span class="c"># this is a generator that will read pictures found in</span>
+<span class="c"># subfolers of &#39;data/train&#39;, and indefinitely generate</span>
+<span class="c"># batches of augmented image data</span>
+<span class="n">train_generator</span> <span class="o">=</span> <span class="n">train_datagen</span><span class="o">.</span><span class="n">flow_from_directory</span><span class="p">(</span>
+        <span class="s">&#39;data/train&#39;</span><span class="p">,</span>  <span class="c"># this is the target directory</span>
+        <span class="n">target_size</span><span class="o">=</span><span class="p">(</span><span class="mi">150</span><span class="p">,</span> <span class="mi">150</span><span class="p">),</span>  <span class="c"># all images will be resized to 150x150</span>
+        <span class="n">batch_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+        <span class="n">class_mode</span><span class="o">=</span><span class="s">&#39;binary&#39;</span><span class="p">)</span>  <span class="c"># since we use binary_crossentropy loss, we need binary labels</span>
+
+<span class="c"># this is a similar generator, for validation data</span>
+<span class="n">validation_generator</span> <span class="o">=</span> <span class="n">test_datagen</span><span class="o">.</span><span class="n">flow_from_directory</span><span class="p">(</span>
+        <span class="s">&#39;data/validation&#39;</span><span class="p">,</span>
+        <span class="n">target_size</span><span class="o">=</span><span class="p">(</span><span class="mi">150</span><span class="p">,</span> <span class="mi">150</span><span class="p">),</span>
+        <span class="n">batch_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+        <span class="n">class_mode</span><span class="o">=</span><span class="s">&#39;binary&#39;</span><span class="p">)</span>
+</pre></div>
+
+
+<p>We can now use these generators to train our model.
+Each epoch takes 20-30s on GPU and 300-400s on CPU. So it's definitely viable to run this model on CPU if you aren't in a hurry.</p>
+<div class="highlight"><pre><span class="n">model</span><span class="o">.</span><span class="n">fit_generator</span><span class="p">(</span>
+        <span class="n">train_generator</span><span class="p">,</span>
+        <span class="n">samples_per_epoch</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span>
+        <span class="n">nb_epoch</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+        <span class="n">validation_data</span><span class="o">=</span><span class="n">validation_generator</span><span class="p">,</span>
+        <span class="n">nb_val_samples</span><span class="o">=</span><span class="mi">800</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">save_weights</span><span class="p">(</span><span class="s">&#39;first_try.h5&#39;</span><span class="p">)</span>  <span class="c"># always save your weights after training or during training</span>
+</pre></div>
+
+
+<p>This approach gets us to a validation accuracy of 0.79-0.81 after 50 epochs (a number that was picked arbitrarily --because the model is small and uses aggressive dropout, it does not seem to be overfitting too much by that point). So at the time the Kaggle competition was launched, we would be already be "state of the art" --with 8% of the data, and no effort to optimize our architecture or hyperparameters. In fact, in the Kaggle competition, this model would have scored in the top 100 (out of 215 entrants). I guess that at least 115 entrants weren't using deep learning ;)</p>
+<p>Note that the variance of the validation accuracy is fairly high, both because accuracy is a high-variance metric and because we only use 800 validation samples. A good validation strategy in such cases would be to do k-fold cross-validation, but this would require training k models for every evaluation round.</p>
+<hr />
+<h2>Using the bottleneck features of a pre-trained network: 90% accuracy in a minute</h2>
+<p>A more refined approach would be to leverage a network pre-trained on a large dataset. Such a network would have already learned features that are useful for most computer vision problems, and leveraging such features would allow us to reach a better accuracy than any method that would only rely on the available data.</p>
+<p>We will use the VGG16 architecture, pre-trained on the ImageNet dataset --a model previously featured on this blog. Because the ImageNet dataset contains several "cat" classes (persian cat, siamese cat...) and many "dog" classes among its total of 1000 classes, this model will already have learned features that are relevant to our classification problem. In fact, it is possible that merely recording the softmax predictions of the model over our data rather than the bottleneck features would be enough to solve our dogs vs. cats classification problem extremely well. However, the method we present here is more likely to generalize well to a broader range of problems, including problems featuring classes absent from ImageNet.</p>
+<p>Here's what the VGG16 architecture looks like:</p>
+<p><img src="/img/imgclf/vgg16_original.png" alt="vgg16" style="width: 400px;"/></p>
+<p>Our strategy will be as follow: we will only instantiate the convolutional part of the model, everything up to the fully-connected layers. We will then run this model on our training and validation data once, recording the output (the "bottleneck features" from th VGG16 model: the last activation maps before the fully-connected layers) in two numpy arrays. Then we will train a small fully-connected model on top of the stored features.</p>
+<p>The reason why we are storing the features offline rather than adding our fully-connected model directly on top of a frozen convolutional base and running the whole thing, is computational effiency. Running VGG16 is expensive, especially if you're working on CPU, and we want to only do it once. Note that this prevents us from using data augmentation.</p>
+<p>You can find the full code for this experiment <a href="https://gist.github.com/fchollet/f35fbc80e066a49d65f1688a7e99f069">here</a>. You can get the weights file <a href="https://gist.github.com/baraldilorenzo/07d7802847aaad0a35d3">from Github</a>. We won't review how the model is built and loaded --this is covered in multiple Keras examples already. But let's take a look at how we record the bottleneck features using image data generators:</p>
+<div class="highlight"><pre><span class="n">generator</span> <span class="o">=</span> <span class="n">datagen</span><span class="o">.</span><span class="n">flow_from_directory</span><span class="p">(</span>
+        <span class="s">&#39;data/train&#39;</span><span class="p">,</span>
+        <span class="n">target_size</span><span class="o">=</span><span class="p">(</span><span class="mi">150</span><span class="p">,</span> <span class="mi">150</span><span class="p">),</span>
+        <span class="n">batch_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+        <span class="n">class_mode</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>  <span class="c"># this means our generator will only yield batches of data, no labels</span>
+        <span class="n">shuffle</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>  <span class="c"># our data will be in order, so all first 1000 images will be cats, then 1000 dogs</span>
+<span class="c"># the predict_generator method returns the output of a model, given</span>
+<span class="c"># a generator that yields batches of numpy data</span>
+<span class="n">bottleneck_features_train</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict_generator</span><span class="p">(</span><span class="n">generator</span><span class="p">,</span> <span class="mi">2000</span><span class="p">)</span>
+<span class="c"># save the output as a Numpy array</span>
+<span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="s">&#39;bottleneck_features_train.npy&#39;</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">),</span> <span class="n">bottleneck_features_train</span><span class="p">)</span>
+
+<span class="n">generator</span> <span class="o">=</span> <span class="n">datagen</span><span class="o">.</span><span class="n">flow_from_directory</span><span class="p">(</span>
+        <span class="s">&#39;data/validation&#39;</span><span class="p">,</span>
+        <span class="n">target_size</span><span class="o">=</span><span class="p">(</span><span class="mi">150</span><span class="p">,</span> <span class="mi">150</span><span class="p">),</span>
+        <span class="n">batch_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+        <span class="n">class_mode</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+        <span class="n">shuffle</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+<span class="n">bottleneck_features_validation</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict_generator</span><span class="p">(</span><span class="n">generator</span><span class="p">,</span> <span class="mi">800</span><span class="p">)</span>
+<span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="s">&#39;bottleneck_features_validation.npy&#39;</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">),</span> <span class="n">bottleneck_features_validation</span><span class="p">)</span>
+</pre></div>
+
+
+<p>We can then load our saved data and train a small fully-connected model:</p>
+<div class="highlight"><pre><span class="n">train_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="s">&#39;bottleneck_features_train.npy&#39;</span><span class="p">))</span>
+<span class="c"># the features were saved in order, so recreating the labels is easy</span>
+<span class="n">train_labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">1000</span> <span class="o">+</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span>
+
+<span class="n">validation_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="s">&#39;bottleneck_features_validation.npy&#39;</span><span class="p">))</span>
+<span class="n">validation_labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">400</span> <span class="o">+</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">400</span><span class="p">)</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">Sequential</span><span class="p">()</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Flatten</span><span class="p">(</span><span class="n">input_shape</span><span class="o">=</span><span class="n">train_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Dense</span><span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Dropout</span><span class="p">(</span><span class="mf">0.5</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Dense</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;sigmoid&#39;</span><span class="p">))</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="s">&#39;rmsprop&#39;</span><span class="p">,</span>
+              <span class="n">loss</span><span class="o">=</span><span class="s">&#39;binary_crossentropy&#39;</span><span class="p">,</span>
+              <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;accuracy&#39;</span><span class="p">])</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">train_data</span><span class="p">,</span> <span class="n">train_labels</span><span class="p">,</span>
+          <span class="n">nb_epoch</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+          <span class="n">validation_data</span><span class="o">=</span><span class="p">(</span><span class="n">validation_data</span><span class="p">,</span> <span class="n">validation_labels</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">save_weights</span><span class="p">(</span><span class="s">&#39;bottleneck_fc_model.h5&#39;</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Thanks to its small size, this model trains very quickly even on CPU (1s per epoch):</p>
+<div class="highlight"><pre>Train on 2000 samples, validate on 800 samples
+Epoch 1/50
+2000/2000 [==============================] - 1s - loss: 0.8932 - acc: 0.7345 - val_loss: 0.2664 - val_acc: 0.8862
+Epoch 2/50
+2000/2000 [==============================] - 1s - loss: 0.3556 - acc: 0.8460 - val_loss: 0.4704 - val_acc: 0.7725
+...
+Epoch 47/50
+2000/2000 [==============================] - 1s - loss: 0.0063 - acc: 0.9990 - val_loss: 0.8230 - val_acc: 0.9125
+Epoch 48/50
+2000/2000 [==============================] - 1s - loss: 0.0144 - acc: 0.9960 - val_loss: 0.8204 - val_acc: 0.9075
+Epoch 49/50
+2000/2000 [==============================] - 1s - loss: 0.0102 - acc: 0.9960 - val_loss: 0.8334 - val_acc: 0.9038
+Epoch 50/50
+2000/2000 [==============================] - 1s - loss: 0.0040 - acc: 0.9985 - val_loss: 0.8556 - val_acc: 0.9075
+</pre></div>
+
+
+<p>We reach a validation accuracy of 0.90-0.91: not bad at all. This is definitely partly due to the fact that the base model was trained on a dataset that already featured dogs and cats (among hundreds of other classes).</p>
+<hr />
+<h2>Fine-tuning the top layers of a a pre-trained network</h2>
+<p>To further improve our previous result, we can try to "fine-tune" the last convolutional block of the VGG16 model alongside the top-level classifier. Fine-tuning consist in starting from a trained network, then re-training it on a new dataset using very small weight updates. In our case, this can be done in 3 steps:</p>
+<ul>
+<li>instantiate the convolutional base of VGG16 and load its weights</li>
+<li>add our previously defined fully-connected model on top, and load its weights</li>
+<li>freeze the layers of the VGG16 model up to the last convolutional block</li>
+</ul>
+<p><img src="/img/imgclf/vgg16_modified.png" alt="vgg16: fine-tuning" style="width: 400px;"/></p>
+<p>Note that:</p>
+<ul>
+<li>in order to perform fine-tuning, all layers should start with properly trained weights: for instance you should not slap a randomly initialized fully-connected network on top of a pre-trained convolutional base. This is because the large gradient updates triggered by the randomly initialized weights would wreck the learned weights in the convolutional base. In our case this is why we first train the top-level classifier, and only then start fine-tuning convolutional weights alongside it.</li>
+<li>we choose to only fine-tune the last convolutional block rather than the entire network in order to prevent overfitting, since the entire network would have a very large entropic capacity and thus a strong tendency to overfit. The features learned by low-level convolutional blocks are more general, less abstract than those found higher-up, so it is sensible to keep the first few blocks fixed (more general features) and only fine-tune the last one (more specialized features).</li>
+<li>fine-tuning should be done with a very slow learning rate, and typically with the SGD optimizer rather than an adaptative learning rate optimizer such as RMSProp. This is to make sure that the magnitude of the updates stays very small, so as not to wreck the previously learned features.</li>
+</ul>
+<p>You can find the full code for this experiment <a href="https://gist.github.com/fchollet/7eb39b44eb9e16e59632d25fb3119975">here</a>.</p>
+<p>After instantiating the VGG base and loading its weights, we add our previously trained fully-connected classifier on top:</p>
+<div class="highlight"><pre><span class="c"># build a classifier model to put on top of the convolutional model</span>
+<span class="n">top_model</span> <span class="o">=</span> <span class="n">Sequential</span><span class="p">()</span>
+<span class="n">top_model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Flatten</span><span class="p">(</span><span class="n">input_shape</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">output_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span>
+<span class="n">top_model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Dense</span><span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">))</span>
+<span class="n">top_model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Dropout</span><span class="p">(</span><span class="mf">0.5</span><span class="p">))</span>
+<span class="n">top_model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Dense</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;sigmoid&#39;</span><span class="p">))</span>
+
+<span class="c"># note that it is necessary to start with a fully-trained</span>
+<span class="c"># classifier, including the top classifier,</span>
+<span class="c"># in order to successfully do fine-tuning</span>
+<span class="n">top_model</span><span class="o">.</span><span class="n">load_weights</span><span class="p">(</span><span class="n">top_model_weights_path</span><span class="p">)</span>
+
+<span class="c"># add the model on top of the convolutional base</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">top_model</span><span class="p">)</span>
+</pre></div>
+
+
+<p>We then proceed to freeze all convolutional layers up to the last convolutional block:</p>
+<div class="highlight"><pre><span class="c"># set the first 25 layers (up to the last conv block)</span>
+<span class="c"># to non-trainable (weights will not be updated)</span>
+<span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">[:</span><span class="mi">25</span><span class="p">]:</span>
+    <span class="n">layer</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="bp">False</span>
+
+<span class="c"># compile the model with a SGD/momentum optimizer</span>
+<span class="c"># and a very slow learning rate.</span>
+<span class="n">model</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="s">&#39;binary_crossentropy&#39;</span><span class="p">,</span>
+              <span class="n">optimizer</span><span class="o">=</span><span class="n">optimizers</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span><span class="n">lr</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span> <span class="n">momentum</span><span class="o">=</span><span class="mf">0.9</span><span class="p">),</span>
+              <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;accuracy&#39;</span><span class="p">])</span>
+</pre></div>
+
+
+<p>Finally, we start training the whole thing, with a very slow learning rate:</p>
+<div class="highlight"><pre><span class="c"># prepare data augmentation configuration</span>
+<span class="n">train_datagen</span> <span class="o">=</span> <span class="n">ImageDataGenerator</span><span class="p">(</span>
+        <span class="n">rescale</span><span class="o">=</span><span class="mf">1.</span><span class="o">/</span><span class="mi">255</span><span class="p">,</span>
+        <span class="n">shear_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">zoom_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">horizontal_flip</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+<span class="n">test_datagen</span> <span class="o">=</span> <span class="n">ImageDataGenerator</span><span class="p">(</span><span class="n">rescale</span><span class="o">=</span><span class="mf">1.</span><span class="o">/</span><span class="mi">255</span><span class="p">)</span>
+
+<span class="n">train_generator</span> <span class="o">=</span> <span class="n">train_datagen</span><span class="o">.</span><span class="n">flow_from_directory</span><span class="p">(</span>
+        <span class="n">train_data_dir</span><span class="p">,</span>
+        <span class="n">target_size</span><span class="o">=</span><span class="p">(</span><span class="n">img_height</span><span class="p">,</span> <span class="n">img_width</span><span class="p">),</span>
+        <span class="n">batch_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+        <span class="n">class_mode</span><span class="o">=</span><span class="s">&#39;binary&#39;</span><span class="p">)</span>
+
+<span class="n">validation_generator</span> <span class="o">=</span> <span class="n">test_datagen</span><span class="o">.</span><span class="n">flow_from_directory</span><span class="p">(</span>
+        <span class="n">validation_data_dir</span><span class="p">,</span>
+        <span class="n">target_size</span><span class="o">=</span><span class="p">(</span><span class="n">img_height</span><span class="p">,</span> <span class="n">img_width</span><span class="p">),</span>
+        <span class="n">batch_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+        <span class="n">class_mode</span><span class="o">=</span><span class="s">&#39;binary&#39;</span><span class="p">)</span>
+
+<span class="c"># fine-tune the model</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit_generator</span><span class="p">(</span>
+        <span class="n">train_generator</span><span class="p">,</span>
+        <span class="n">samples_per_epoch</span><span class="o">=</span><span class="n">nb_train_samples</span><span class="p">,</span>
+        <span class="n">nb_epoch</span><span class="o">=</span><span class="n">nb_epoch</span><span class="p">,</span>
+        <span class="n">validation_data</span><span class="o">=</span><span class="n">validation_generator</span><span class="p">,</span>
+        <span class="n">nb_val_samples</span><span class="o">=</span><span class="n">nb_validation_samples</span><span class="p">)</span>
+</pre></div>
+
+
+<p>This approach gets us to a validation accuracy of 0.94 after 50 epochs. Great success!</p>
+<p>Here are a few more approaches you can try to get to above 0.95:</p>
+<ul>
+<li>more aggresive data augmentation</li>
+<li>more aggressive dropout</li>
+<li>use of L1 and L2 regularization (also known as "weight decay")</li>
+<li>fine-tuning one more convolutional block (alongside greater regularization)</li>
+</ul>
+<hr />
+<p>This post ends here! To recap, here is where you can find the code for our three experiments:</p>
+<ul>
+<li><a href="https://gist.github.com/fchollet/0830affa1f7f19fd47b06d4cf89ed44d">Convnet trained from scratch</a></li>
+<li><a href="https://gist.github.com/fchollet/f35fbc80e066a49d65f1688a7e99f069">Bottleneck features</a></li>
+<li><a href="https://gist.github.com/fchollet/7eb39b44eb9e16e59632d25fb3119975">Fine-tuning</a></li>
+</ul>
+<p>If you have any comment about this post or any suggestion about future topics to cover, you can reach out <a href="https://twitter.com/fchollet">on Twitter</a>.</p>
+<hr />
+        </article></aside><!-- /#featured -->
+                <h1>Other articles</h1>
+                <hr />
+                    <ol id="posts-list" class="hfeed">
+        <li><article class="hentry">
+                <header>
+                        <h1><a href="http://blog.keras.io/building-autoencoders-in-keras.html" rel="bookmark" title="Permalink to Building Autoencoders in Keras">Building Autoencoders in Keras</a></h1>
+                </header>
+
+                <div class="entry-content">
 <footer class="post-info">
         <abbr class="published" title="2016-05-14T00:00:00+02:00">
                 Sat 14 May 2016
@@ -65,499 +461,10 @@
 <li>a deep convolutional autoencoder</li>
 <li>an image denoising model</li>
 <li>a sequence-to-sequence autoencoder</li>
-<li>a variational autoencoder</li>
-</ul>
-<hr />
-<h2>What are autoencoders?</h2>
-<p><img alt="Autoencoder: schema" src="/img/ae/autoencoder_schema.jpg" /></p>
-<p>"Autoencoding" is a data compression algorithm where the compression and decompression functions are 1) data-specific, 2) lossy, and 3) <em>learned automatically from examples</em> rather than engineered by a human. Additionally, in almost all contexts where the term "autoencoder" is used, the compression and decompression functions are implemented with neural networks.</p>
-<p>1) Autoencoders are data-specific, which means that they will only be able to compress data similar to what they have been trained on. This is different from, say, the MPEG-2 Audio Layer III (MP3) compression algorithm, which only holds assumptions about "sound" in general, but not about specific types of sounds. An autoencoder trained on pictures of faces would do a rather poor job of compressing pictures of trees, because the features it would learn would be face-specific.</p>
-<p>2) Autoencoders are lossy, which means that the decompressed outputs will be degraded compared to the original inputs (similar to MP3 or JPEG compression). This differs from lossless arithmetic compression.</p>
-<p>3) Autoencoders are learned automatically from data examples, which is a useful property: it means that it is easy to train specialized instances of the algorithm that will perform well on a specific type of input. It doesn't require any new engineering, just appropriate training data.</p>
-<p>To build an autoencoder, you need three things: an encoding function, a decoding function, and a distance function between the amount of information loss between the compressed representation of your data and the decompressed representation (i.e. a "loss" function). The encoder and decoder will be chosen to be parametric functions (typically neural networks), and to be differentiable with respect to the distance function, so the parameters of the encoding/decoding functions can be optimize to minimize the reconstruction loss, using Stochastic Gradient Descent. It's simple! And you don't even need to understand any of these words to start using autoencoders in practice.</p>
-<h2>Are they good at data compression?</h2>
-<p>Usually, not really. In picture compression for instance, it is pretty difficult to train an autoencoder that does a better job than a basic algorithm like JPEG, and typically the only way it can be achieved is by restricting yourself to a very specific type of picture (e.g. one for which JPEG does not do a good job). The fact that autoencoders are data-specific makes them generally impractical for real-world data compression problems: you can only use them on data that is similar to what they were trained on, and making them more general thus requires <em>lots</em> of training data. But future advances might change this, who knows.</p>
-<h2>What are autoencoders good for?</h2>
-<p>They are rarely used in practical applications. In 2012 they briefly found an application in greedy layer-wise pretraining for deep convolutional neural networks [1], but this quickly fell out of fashion as we started realizing that better random weight initialization schemes were sufficient for training deep networks from scratch. In 2014, batch normalization [2] started allowing for even deeper networks, and from late 2015 we could train arbitrarily deep networks from scratch using residual learning [3].</p>
-<p>Today two interesting practical applications of autoencoders are <strong>data denoising</strong> (which we feature later in this post), and <strong>dimensionality reduction for data visualization</strong>. With appropriate dimensionality and sparsity constraints, autoencoders can learn data projections that are more interesting than PCA or other basic techniques.</p>
-<p>For 2D visualization specifically, <a href="https://en.wikipedia.org/wiki/T-distributed_stochastic_neighbor_embedding">t-SNE</a> (pronounced "tee-snee") is probably the best algorithm around, but it typically requires relatively low-dimensional data. So a good strategy for visualizing similarity relationships in high-dimensional data is to start by using an autoencoder to compress your data into a low-dimensional space (e.g. 32 dimensional), then use t-SNE for mapping the compressed data to a 2D plane. Note that a nice parametric implementation of t-SNE in Keras was developed by Kyle McDonald and <a href="https://github.com/kylemcdonald/Parametric-t-SNE/blob/master/Parametric%20t-SNE%20(Keras).ipynb">is available on Github</a>. Otherwise <a href="http://scikit-learn.org/stable/modules/generated/sklearn.manifold.TSNE.html">scikit-learn</a> also has a simple and practical implementation.</p>
-<h2>So what's the big deal with autoencoders?</h2>
-<p>Their main claim to fame comes from being featured in many introductory machine learning classes available online. As a result, a lot of newcomers to the field absolutely love autoencoders and can't get enough of them. This is the reason why this tutorial exists!</p>
-<p>Otherwise, one reason why they have attracted so much research and attention is because they have long been thought to be a potential avenue for solving the problem of unsupervised learning, i.e. the learning of useful representations without the need for labels. Then again, autoencoders are not a true unsupervised learning technique (which would imply a different learning process altogether), they are a <em>self-supervised</em> technique, a specific instance of <em>supervised learning</em> where the targets are generated from the input data. In order to get self-supervised models to learn interesting features, you have to come up with an interesting synthetic target and loss function, and that's where problems arise: merely learning to reconstruct your input in minute detail might not be the right choice here. At this point there is significant evidence that focusing on the reconstruction of a picture at the pixel level, for instance, is not conductive to learning interesting, abstract features of the kind that label-supervized learning induces (where targets are fairly abstract concepts "invented" by humans such as "dog", "car"...). In fact, one may argue that the best features in this regard are those that are the <em>worst</em> at exact input reconstruction while achieving high performance on the main task that you are interested in (classification, localization, etc).</p>
-<p>In self-supervized learning applied to vision, a potentially fruitful alternative to autoencoder-style input reconstruction is the use of toy tasks such as jigsaw puzzle solving, or detail-context matching (being able to match high-resolution but small patches of pictures with low-resolution versions of the pictures they are extracted from). The following paper investigates jigsaw puzzle solving and makes for a very interesting read: Noroozi and Favaro (2016) <a href="http://arxiv.org/abs/1603.09246">Unsupervised Learning of Visual Representations by Solving Jigsaw Puzzles</a>. Such tasks are providing the model with built-in assumptions about the input data which are missing in traditional autoencoders, such as <em>"visual macro-structure matters more than pixel-level details"</em>.</p>
-<p><img alt="jigsaw puzzle task" src="/img/ae/jigsaw-puzzle.png" /></p>
-<hr />
-<h2>Let's build the simplest possible autoencoder</h2>
-<p>We'll start simple, with a single fully-connected neural layer as encoder and as decoder:</p>
-<div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras.layers</span> <span class="kn">import</span> <span class="n">Input</span><span class="p">,</span> <span class="n">Dense</span>
-<span class="kn">from</span> <span class="nn">keras.models</span> <span class="kn">import</span> <span class="n">Model</span>
-
-<span class="c"># this is the size of our encoded representations</span>
-<span class="n">encoding_dim</span> <span class="o">=</span> <span class="mi">32</span>  <span class="c"># 32 floats -&gt; compression of factor 24.5, assuming the input is 784 floats</span>
-
-<span class="c"># this is our input placeholder</span>
-<span class="n">input_img</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">784</span><span class="p">,))</span>
-<span class="c"># &quot;encoded&quot; is the encoded representation of the input</span>
-<span class="n">encoded</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="n">encoding_dim</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">)(</span><span class="n">input_img</span><span class="p">)</span>
-<span class="c"># &quot;decoded&quot; is the lossy reconstruction of the input</span>
-<span class="n">decoded</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">784</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;sigmoid&#39;</span><span class="p">)(</span><span class="n">encoded</span><span class="p">)</span>
-
-<span class="c"># this model maps an input to its reconstruction</span>
-<span class="n">autoencoder</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="n">input_img</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">decoded</span><span class="p">)</span>
-</pre></div>
-
-
-<p>Let's also create a separate encoder model:</p>
-<div class="highlight"><pre><span class="c"># this model maps an input to its encoded representation</span>
-<span class="n">encoder</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="n">input_img</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">encoded</span><span class="p">)</span>
-</pre></div>
-
-
-<p>As well as the decoder model:</p>
-<div class="highlight"><pre><span class="c"># create a placeholder for an encoded (32-dimensional) input</span>
-<span class="n">encoded_input</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">encoding_dim</span><span class="p">,))</span>
-<span class="c"># retrieve the last layer of the autoencoder model</span>
-<span class="n">decoder_layer</span> <span class="o">=</span> <span class="n">autoencoder</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-<span class="c"># create the decoder model</span>
-<span class="n">decoder</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="n">encoded_input</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">decoder_layer</span><span class="p">(</span><span class="n">encoded_input</span><span class="p">))</span>
-</pre></div>
-
-
-<p>Now let's train our autoencoder to reconstruct MNIST digits. </p>
-<p>First, we'll configure our model to use a per-pixel binary crossentropy loss, and the Adadelta optimizer:</p>
-<div class="highlight"><pre><span class="n">autoencoder</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="s">&#39;adadelta&#39;</span><span class="p">,</span> <span class="n">loss</span><span class="o">=</span><span class="s">&#39;binary_crossentropy&#39;</span><span class="p">)</span>
-</pre></div>
-
-
-<p>Let's prepare our input data. We're using MNIST digits, and we're discarding the labels (since we're only interested in encoding/decoding the input images).</p>
-<div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras.datasets</span> <span class="kn">import</span> <span class="n">mnist</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
-<span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="n">_</span><span class="p">),</span> <span class="p">(</span><span class="n">x_test</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="o">=</span> <span class="n">mnist</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span>
-</pre></div>
-
-
-<p>We will normalize all values between 0 and 1 and we will flatten the 28x28 images into vectors of size 784.</p>
-<div class="highlight"><pre><span class="n">x_train</span> <span class="o">=</span> <span class="n">x_train</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s">&#39;float32&#39;</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.</span>
-<span class="n">x_test</span> <span class="o">=</span> <span class="n">x_test</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s">&#39;float32&#39;</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.</span>
-<span class="n">x_train</span> <span class="o">=</span> <span class="n">x_train</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">x_train</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">x_train</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])))</span>
-<span class="n">x_test</span> <span class="o">=</span> <span class="n">x_test</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">x_test</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">x_test</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])))</span>
-<span class="k">print</span> <span class="n">x_train</span><span class="o">.</span><span class="n">shape</span>
-<span class="k">print</span> <span class="n">x_test</span><span class="o">.</span><span class="n">shape</span>
-</pre></div>
-
-
-<p>Now let's train our autoencoder for 50 epochs:</p>
-<div class="highlight"><pre><span class="n">autoencoder</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="n">x_train</span><span class="p">,</span>
-                <span class="n">nb_epoch</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
-                <span class="n">batch_size</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
-                <span class="n">shuffle</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
-                <span class="n">validation_data</span><span class="o">=</span><span class="p">(</span><span class="n">x_test</span><span class="p">,</span> <span class="n">x_test</span><span class="p">))</span>
-</pre></div>
-
-
-<p>After 50 epochs, the autoencoder seems to reach a stable train/test loss value of about <code>0.11</code>. We can try to visualize the reconstructed inputs and the encoded representations. We will use Matplotlib.</p>
-<div class="highlight"><pre><span class="c"># encode and decode some digits</span>
-<span class="c"># note that we take them from the *test* set</span>
-<span class="n">encoded_imgs</span> <span class="o">=</span> <span class="n">encoder</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">x_test</span><span class="p">)</span>
-<span class="n">decoded_imgs</span> <span class="o">=</span> <span class="n">decoder</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">encoded_imgs</span><span class="p">)</span>
-</pre></div>
-
-
-<div class="highlight"><pre><span class="c"># use Matplotlib (don&#39;t ask)</span>
-<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
-
-<span class="n">n</span> <span class="o">=</span> <span class="mi">10</span>  <span class="c"># how many digits we will display</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
-<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
-    <span class="c"># display original</span>
-    <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">x_test</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">))</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">gray</span><span class="p">()</span>
-    <span class="n">ax</span><span class="o">.</span><span class="n">get_xaxis</span><span class="p">()</span><span class="o">.</span><span class="n">set_visible</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
-    <span class="n">ax</span><span class="o">.</span><span class="n">get_yaxis</span><span class="p">()</span><span class="o">.</span><span class="n">set_visible</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
-
-    <span class="c"># display reconstruction</span>
-    <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="n">n</span><span class="p">)</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">decoded_imgs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">))</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">gray</span><span class="p">()</span>
-    <span class="n">ax</span><span class="o">.</span><span class="n">get_xaxis</span><span class="p">()</span><span class="o">.</span><span class="n">set_visible</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
-    <span class="n">ax</span><span class="o">.</span><span class="n">get_yaxis</span><span class="p">()</span><span class="o">.</span><span class="n">set_visible</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-</pre></div>
-
-
-<p>Here's what we get. The top row is the original digits, and the bottom row is the reconstructed digits. We are losing quite a bit of detail with this basic approach.</p>
-<p><img alt="basic autoencoder" src="/img/ae/basic_ae_32.png" /></p>
-<hr />
-<h2>Adding a sparsity constraint on the encoded representations</h2>
-<p>In the previous example, the representations were only constrained by the size of the hidden layer (32). In such a situation, what typically happens is that the hidden layer is learning an approximation of <a href="https://en.wikipedia.org/wiki/Principal_component_analysis">PCA (principal component analysis)</a>. But another way to constrain the representations to be compact is to add a sparsity contraint on the activity of the hidden representations, so fewer units would "fire" at a given time. In Keras, this can be done by adding an <code>activity_regularizer</code> to our <code>Dense</code> layer:</p>
-<div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras</span> <span class="kn">import</span> <span class="n">regularizers</span>
-
-<span class="n">encoding_dim</span> <span class="o">=</span> <span class="mi">32</span>
-
-<span class="n">input_img</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">784</span><span class="p">,))</span>
-<span class="c"># add a Dense layer with a L1 activity regularizer</span>
-<span class="n">encoded</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="n">encoding_dim</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span>
-                <span class="n">activity_regularizer</span><span class="o">=</span><span class="n">regularizers</span><span class="o">.</span><span class="n">activity_l1</span><span class="p">(</span><span class="mf">10e-5</span><span class="p">))(</span><span class="n">input_img</span><span class="p">)</span>
-<span class="n">decoded</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">784</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;sigmoid&#39;</span><span class="p">)(</span><span class="n">encoded</span><span class="p">)</span>
-
-<span class="n">autoencoder</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="n">input_img</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">decoded</span><span class="p">)</span>
-</pre></div>
-
-
-<p>Let's train this model for 100 epochs (with the added regularization the model is less likely to overfit and can be trained longer). The models ends with a train loss of <code>0.11</code> and test loss of <code>0.10</code>. The difference between the two is mostly due to the regularization term being added to the loss during training (worth about 0.01).</p>
-<p>Here's a visualization of our new results:</p>
-<p><img alt="sparse autoencoder" src="/img/ae/sparse_ae_32.png" /></p>
-<p>They look pretty similar to the previous model, the only significant difference being the sparsity of the encoded representations. <code>encoded_imgs.mean()</code> yields a value <code>3.33</code> (over our 10,000 test images), whereas with the previous model the same quantity was <code>7.30</code>. So our new model yields encoded representations that are twice sparser.</p>
-<hr />
-<h2>Deep autoencoder</h2>
-<p>We do not have to limit ourselves to a single layer as encoder or decoder, we could instead use a stack of layers, such as:</p>
-<div class="highlight"><pre><span class="n">input_img</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">784</span><span class="p">,))</span>
-<span class="n">encoded</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">)(</span><span class="n">input_img</span><span class="p">)</span>
-<span class="n">encoded</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">)(</span><span class="n">encoded</span><span class="p">)</span>
-<span class="n">encoded</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">)(</span><span class="n">encoded</span><span class="p">)</span>
-
-<span class="n">decoded</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">)(</span><span class="n">encoded</span><span class="p">)</span>
-<span class="n">decoded</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">)(</span><span class="n">decoded</span><span class="p">)</span>
-<span class="n">decoded</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">784</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;sigmoid&#39;</span><span class="p">)(</span><span class="n">decoded</span><span class="p">)</span>
-</pre></div>
-
-
-<p>Let's try this:</p>
-<div class="highlight"><pre><span class="n">autoencoder</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="n">input_img</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">decoded</span><span class="p">)</span>
-<span class="n">autoencoder</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="s">&#39;adadelta&#39;</span><span class="p">,</span> <span class="n">loss</span><span class="o">=</span><span class="s">&#39;binary_crossentropy&#39;</span><span class="p">)</span>
-
-<span class="n">autoencoder</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="n">x_train</span><span class="p">,</span>
-                <span class="n">nb_epoch</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
-                <span class="n">batch_size</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
-                <span class="n">shuffle</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
-                <span class="n">validation_data</span><span class="o">=</span><span class="p">(</span><span class="n">x_test</span><span class="p">,</span> <span class="n">x_test</span><span class="p">))</span>
-</pre></div>
-
-
-<p>After 100 epochs, it reaches a train and test loss of ~0.097, a bit better than our previous models. Our reconstructed digits look a bit better too:</p>
-<p><img alt="deep autoencoder" src="/img/ae/deep_ae_32.png" /></p>
-<hr />
-<h2>Convolutional autoencoder</h2>
-<p>Since our inputs are images, it makes sense to use convolutional neural networks (convnets) as encoders and decoders. In practical settings, autoencoders applied to images are always convolutional autoencoders --they simply perform much better.</p>
-<p>Let's implement one. The encoder will consist in a stack of <code>Convolution2D</code> and <code>MaxPooling2D</code> layers (max pooling being used for spatial down-sampling), while the decoder will consist in a stack of <code>Convolution2D</code> and <code>UpSampling2D</code> layers.</p>
-<div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras.layers</span> <span class="kn">import</span> <span class="n">Input</span><span class="p">,</span> <span class="n">Dense</span><span class="p">,</span> <span class="n">Convolution2D</span><span class="p">,</span> <span class="n">MaxPooling2D</span><span class="p">,</span> <span class="n">UpSampling2D</span>
-<span class="kn">from</span> <span class="nn">keras.models</span> <span class="kn">import</span> <span class="n">Model</span>
-
-<span class="n">input_img</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">))</span>
-
-<span class="n">x</span> <span class="o">=</span> <span class="n">Convolution2D</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">border_mode</span><span class="o">=</span><span class="s">&#39;same&#39;</span><span class="p">)(</span><span class="n">input_img</span><span class="p">)</span>
-<span class="n">x</span> <span class="o">=</span> <span class="n">MaxPooling2D</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">border_mode</span><span class="o">=</span><span class="s">&#39;same&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
-<span class="n">x</span> <span class="o">=</span> <span class="n">Convolution2D</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">border_mode</span><span class="o">=</span><span class="s">&#39;same&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
-<span class="n">x</span> <span class="o">=</span> <span class="n">MaxPooling2D</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">border_mode</span><span class="o">=</span><span class="s">&#39;same&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
-<span class="n">x</span> <span class="o">=</span> <span class="n">Convolution2D</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">border_mode</span><span class="o">=</span><span class="s">&#39;same&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
-<span class="n">encoded</span> <span class="o">=</span> <span class="n">MaxPooling2D</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">border_mode</span><span class="o">=</span><span class="s">&#39;same&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
-
-<span class="c"># at this point the representation is (8, 4, 4) i.e. 128-dimensional</span>
-
-<span class="n">x</span> <span class="o">=</span> <span class="n">Convolution2D</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">border_mode</span><span class="o">=</span><span class="s">&#39;same&#39;</span><span class="p">)(</span><span class="n">encoded</span><span class="p">)</span>
-<span class="n">x</span> <span class="o">=</span> <span class="n">UpSampling2D</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))(</span><span class="n">x</span><span class="p">)</span>
-<span class="n">x</span> <span class="o">=</span> <span class="n">Convolution2D</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">border_mode</span><span class="o">=</span><span class="s">&#39;same&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
-<span class="n">x</span> <span class="o">=</span> <span class="n">UpSampling2D</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))(</span><span class="n">x</span><span class="p">)</span>
-<span class="n">x</span> <span class="o">=</span> <span class="n">Convolution2D</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
-<span class="n">x</span> <span class="o">=</span> <span class="n">UpSampling2D</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))(</span><span class="n">x</span><span class="p">)</span>
-<span class="n">decoded</span> <span class="o">=</span> <span class="n">Convolution2D</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;sigmoid&#39;</span><span class="p">,</span> <span class="n">border_mode</span><span class="o">=</span><span class="s">&#39;same&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
-
-<span class="n">autoencoder</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">input_img</span><span class="p">,</span> <span class="n">decoded</span><span class="p">)</span>
-<span class="n">autoencoder</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="s">&#39;adadelta&#39;</span><span class="p">,</span> <span class="n">loss</span><span class="o">=</span><span class="s">&#39;binary_crossentropy&#39;</span><span class="p">)</span>
-</pre></div>
-
-
-<p>To train it, we will use the original MNIST digits with shape <code>(samples, 3, 28, 28)</code>, and we will just normalize pixel values between 0 and 1.</p>
-<div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras.datasets</span> <span class="kn">import</span> <span class="n">mnist</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
-
-<span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="n">_</span><span class="p">),</span> <span class="p">(</span><span class="n">x_test</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="o">=</span> <span class="n">mnist</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span>
-
-<span class="n">x_train</span> <span class="o">=</span> <span class="n">x_train</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s">&#39;float32&#39;</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.</span>
-<span class="n">x_test</span> <span class="o">=</span> <span class="n">x_test</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s">&#39;float32&#39;</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.</span>
-<span class="n">x_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x_train</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">))</span>
-<span class="n">x_test</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">x_test</span><span class="p">,</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x_test</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">))</span>
-</pre></div>
-
-
-<p>Let's train this model for 50 epochs. For the sake of demonstrating how to visualize the results of a model during training, we will be using <a href="">the TensorFlow backend</a> and the TensorBoard callback.</p>
-<p>First, let's open up a terminal and start a TensorBoard server that will read logs stored at <code>/tmp/autoencoder</code>.</p>
-<div class="highlight"><pre>tensorboard --logdir<span class="o">=</span>/tmp/autoencoder
-</pre></div>
-
-
-<p>Then let's train our model. In the <code>callbacks</code> list we pass an instance of the <code>TensorBoard</code> callback. After every epoch, this callback will write logs to <code>/tmp/autoencoder</code>, which can be read by our TensorBoard server.</p>
-<div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras.callbacks</span> <span class="kn">import</span> <span class="n">TensorBoard</span>
-
-<span class="n">autoencoder</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="n">x_train</span><span class="p">,</span>
-                <span class="n">nb_epoch</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
-                <span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
-                <span class="n">shuffle</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
-                <span class="n">validation_data</span><span class="o">=</span><span class="p">(</span><span class="n">x_test</span><span class="p">,</span> <span class="n">x_test</span><span class="p">),</span>
-                <span class="n">callbacks</span><span class="o">=</span><span class="p">[</span><span class="n">TensorBoard</span><span class="p">(</span><span class="n">log_dir</span><span class="o">=</span><span class="s">&#39;/tmp/autoencoder&#39;</span><span class="p">)])</span>
-</pre></div>
-
-
-<p>This allows us to monitor training in the TensorBoard web interface (by navighating to <code>http://0.0.0.0:6006</code>):</p>
-<p><img alt="tensorboard curves" src="/img/ae/tb_curves.png" /></p>
-<p>The model converges to a loss of 0.094, significantly better than our previous models (this is in large part due to the higher entropic capacity of the encoded representation, 128 dimensions vs. 32 previously). Let's take a look at the reconstructed digits:</p>
-<div class="highlight"><pre><span class="n">decoded_imgs</span> <span class="o">=</span> <span class="n">autoencoder</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">x_test</span><span class="p">)</span>
-
-<span class="n">n</span> <span class="o">=</span> <span class="mi">10</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
-<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
-    <span class="c"># display original</span>
-    <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">x_test</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">))</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">gray</span><span class="p">()</span>
-    <span class="n">ax</span><span class="o">.</span><span class="n">get_xaxis</span><span class="p">()</span><span class="o">.</span><span class="n">set_visible</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
-    <span class="n">ax</span><span class="o">.</span><span class="n">get_yaxis</span><span class="p">()</span><span class="o">.</span><span class="n">set_visible</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
-
-    <span class="c"># display reconstruction</span>
-    <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="n">n</span><span class="p">)</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">decoded_imgs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">))</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">gray</span><span class="p">()</span>
-    <span class="n">ax</span><span class="o">.</span><span class="n">get_xaxis</span><span class="p">()</span><span class="o">.</span><span class="n">set_visible</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
-    <span class="n">ax</span><span class="o">.</span><span class="n">get_yaxis</span><span class="p">()</span><span class="o">.</span><span class="n">set_visible</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-</pre></div>
-
-
-<p><img alt="convolutional autoencoder" src="/img/ae/deep_conv_ae_128.png" /></p>
-<p>We can also have a look at the 128-dimensional encoded representations. These representations are 8x4x4, so we reshape them to 4x32 in order to be able to display them as grayscale images.</p>
-<div class="highlight"><pre><span class="n">n</span> <span class="o">=</span> <span class="mi">10</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
-<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
-    <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">encoded_imgs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span> <span class="o">*</span> <span class="mi">8</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">gray</span><span class="p">()</span>
-    <span class="n">ax</span><span class="o">.</span><span class="n">get_xaxis</span><span class="p">()</span><span class="o">.</span><span class="n">set_visible</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
-    <span class="n">ax</span><span class="o">.</span><span class="n">get_yaxis</span><span class="p">()</span><span class="o">.</span><span class="n">set_visible</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-</pre></div>
-
-
-<p><img alt="latent representations" src="/img/ae/encoded_representations.png" /></p>
-<hr />
-<h2>Application to image denoising</h2>
-<p>Let's put our convolutional autoencoder to work on an image denoising problem. It's simple: we will train the autoencoder to map noisy digits images to clean digits images.</p>
-<p>Here's how we will generate synthetic noisy digits: we just apply a gaussian noise matrix and clip the images between 0 and 1.</p>
-<div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras.datasets</span> <span class="kn">import</span> <span class="n">mnist</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
-
-<span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="n">_</span><span class="p">),</span> <span class="p">(</span><span class="n">x_test</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="o">=</span> <span class="n">mnist</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span>
-
-<span class="n">x_train</span> <span class="o">=</span> <span class="n">x_train</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s">&#39;float32&#39;</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.</span>
-<span class="n">x_test</span> <span class="o">=</span> <span class="n">x_test</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s">&#39;float32&#39;</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.</span>
-<span class="n">x_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x_train</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">))</span>
-<span class="n">x_test</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">x_test</span><span class="p">,</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x_test</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">))</span>
-
-<span class="n">noise_factor</span> <span class="o">=</span> <span class="mf">0.5</span>
-<span class="n">x_train_noisy</span> <span class="o">=</span> <span class="n">x_train</span> <span class="o">+</span> <span class="n">noise_factor</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">x_train</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> 
-<span class="n">x_test_noisy</span> <span class="o">=</span> <span class="n">x_test</span> <span class="o">+</span> <span class="n">noise_factor</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">x_test</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> 
-
-<span class="n">x_train_noisy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">x_train_noisy</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">)</span>
-<span class="n">x_test_noisy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">x_test_noisy</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">)</span>
-</pre></div>
-
-
-<p>Here's what the noisy digits look like:</p>
-<div class="highlight"><pre><span class="n">n</span> <span class="o">=</span> <span class="mi">10</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
-<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
-    <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">x_test_noisy</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">))</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">gray</span><span class="p">()</span>
-    <span class="n">ax</span><span class="o">.</span><span class="n">get_xaxis</span><span class="p">()</span><span class="o">.</span><span class="n">set_visible</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
-    <span class="n">ax</span><span class="o">.</span><span class="n">get_yaxis</span><span class="p">()</span><span class="o">.</span><span class="n">set_visible</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-</pre></div>
-
-
-<p><img alt="noisy digits" src="/img/ae/noisy_digits.png" /></p>
-<p>If you squint you can still recognize them, but barely. Can our autoencoder learn to recover the original digits? Let's find out.</p>
-<p>Compared to the previous convolutional autoencoder, in order to improve the quality of the reconstructed, we'll use a slightly different model with more filters per layer:</p>
-<div class="highlight"><pre><span class="n">input_img</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">))</span>
-
-<span class="n">x</span> <span class="o">=</span> <span class="n">Convolution2D</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">border_mode</span><span class="o">=</span><span class="s">&#39;same&#39;</span><span class="p">)(</span><span class="n">input_img</span><span class="p">)</span>
-<span class="n">x</span> <span class="o">=</span> <span class="n">MaxPooling2D</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">border_mode</span><span class="o">=</span><span class="s">&#39;same&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
-<span class="n">x</span> <span class="o">=</span> <span class="n">Convolution2D</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">border_mode</span><span class="o">=</span><span class="s">&#39;same&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
-<span class="n">encoded</span> <span class="o">=</span> <span class="n">MaxPooling2D</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">border_mode</span><span class="o">=</span><span class="s">&#39;same&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
-
-<span class="c"># at this point the representation is (32, 7, 7)</span>
-
-<span class="n">x</span> <span class="o">=</span> <span class="n">Convolution2D</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">border_mode</span><span class="o">=</span><span class="s">&#39;same&#39;</span><span class="p">)(</span><span class="n">encoded</span><span class="p">)</span>
-<span class="n">x</span> <span class="o">=</span> <span class="n">UpSampling2D</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))(</span><span class="n">x</span><span class="p">)</span>
-<span class="n">x</span> <span class="o">=</span> <span class="n">Convolution2D</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span> <span class="n">border_mode</span><span class="o">=</span><span class="s">&#39;same&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
-<span class="n">x</span> <span class="o">=</span> <span class="n">UpSampling2D</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))(</span><span class="n">x</span><span class="p">)</span>
-<span class="n">decoded</span> <span class="o">=</span> <span class="n">Convolution2D</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;sigmoid&#39;</span><span class="p">,</span> <span class="n">border_mode</span><span class="o">=</span><span class="s">&#39;same&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
-
-<span class="n">autoencoder</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">input_img</span><span class="p">,</span> <span class="n">decoded</span><span class="p">)</span>
-<span class="n">autoencoder</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="s">&#39;adadelta&#39;</span><span class="p">,</span> <span class="n">loss</span><span class="o">=</span><span class="s">&#39;binary_crossentropy&#39;</span><span class="p">)</span>
-</pre></div>
-
-
-<p>Let's train it for 100 epochs:</p>
-<div class="highlight"><pre><span class="n">autoencoder</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">x_train_noisy</span><span class="p">,</span> <span class="n">x_train</span><span class="p">,</span>
-                <span class="n">nb_epoch</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
-                <span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
-                <span class="n">shuffle</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
-                <span class="n">validation_data</span><span class="o">=</span><span class="p">(</span><span class="n">x_test_noisy</span><span class="p">,</span> <span class="n">x_test</span><span class="p">),</span>
-                <span class="n">callbacks</span><span class="o">=</span><span class="p">[</span><span class="n">TensorBoard</span><span class="p">(</span><span class="n">log_dir</span><span class="o">=</span><span class="s">&#39;/tmp/tb&#39;</span><span class="p">,</span> <span class="n">histogram_freq</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">write_graph</span><span class="o">=</span><span class="bp">False</span><span class="p">)])</span>
-</pre></div>
-
-
-<p>Now let's take a look at the results. Top, the noisy digits fed to the network, and bottom, the digits are reconstructed by the network.</p>
-<p><img alt="denoised digits" src="/img/ae/denoised_digits.png" /></p>
-<p>It seems to work pretty well. If you scale this process to a bigger convnet, you can start building document denoising or audio denoising models. <a href="https://www.kaggle.com/c/denoising-dirty-documents">Kaggle has an interesting dataset to get you started</a>.</p>
-<hr />
-<h2>Sequence-to-sequence autoencoder</h2>
-<p>If you inputs are sequences, rather than vectors or 2D images, then you may want to use as encoder and decoder a type of model that can capture temporal structure, such as a LSTM. To build a LSTM-based autoencoder, first use a LSTM encoder to turn your input sequences into a single vector that contains information about the entire sequence, then repeat this vector <code>n</code> times (where <code>n</code> is the number of timesteps in the output sequence), and run a LSTM decoder to turn this constant sequence into the target sequence.</p>
-<p>We won't be demonstrating that one on any specific dataset. We will just put a code example here for future reference for the reader!</p>
-<div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras.layers</span> <span class="kn">import</span> <span class="n">Input</span><span class="p">,</span> <span class="n">LSTM</span><span class="p">,</span> <span class="n">RepeatVector</span>
-<span class="kn">from</span> <span class="nn">keras.models</span> <span class="kn">import</span> <span class="n">Model</span>
-
-<span class="n">inputs</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">timesteps</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">))</span>
-<span class="n">encoded</span> <span class="o">=</span> <span class="n">LSTM</span><span class="p">(</span><span class="n">latent_dim</span><span class="p">)(</span><span class="n">inputs</span><span class="p">)</span>
-
-<span class="n">decoded</span> <span class="o">=</span> <span class="n">RepeatVector</span><span class="p">(</span><span class="n">timesteps</span><span class="p">)(</span><span class="n">encoded</span><span class="p">)</span>
-<span class="n">decoded</span> <span class="o">=</span> <span class="n">LSTM</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="n">return_sequences</span><span class="o">=</span><span class="bp">True</span><span class="p">)(</span><span class="n">decoded</span><span class="p">)</span>
-
-<span class="n">sequence_autoencoder</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">decoded</span><span class="p">)</span>
-<span class="n">encoder</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">encoded</span><span class="p">)</span>
-</pre></div>
-
-
-<hr />
-<h2>Variational autoencoder (VAE)</h2>
-<p>Variational autoencoders are a slightly more modern and interesting take on autoencoding.</p>
-<p>What is a variational autoencoder, you ask? It's a type of autoencoder with added constraints on the encoded representations being learned. More precisely, it is an autoencoder that learns a <a href="https://en.wikipedia.org/wiki/Latent_variable_model">latent variable model</a> for its input data. So instead of letting your neural network learn an arbitrary function, you are learning the parameters of a probability distribution modeling your data. If you sample points from this distribution, you can generate new input data samples: a VAE is a "generative model".</p>
-<p>How does a variational autoencoder work? </p>
-<p>First, an encoder network turns the input samples <code>x</code> into two parameters in a latent space, which we will note <code>z_mean</code> and <code>z_log_sigma</code>. Then, we randomly sample similar points <code>z</code> from the latent normal distribution that is assumed to generate the data, via <code>z = z_mean + exp(z_log_sigma) * epsilon</code>, where <code>epsilon</code> is a random normal tensor. Finally, a decoder network maps these latent space points back to the original input data.</p>
-<p>The parameters of the model are trained via two loss functions: a reconstruction loss forcing the decoded samples to match the initial inputs (just like in our previous autoencoders), and the KL divergence between the learned latent distribution and the prior distribution, acting as a regularization term. You could actually get rid of this latter term entirely, although it does help in learning well-formed latent spaces and reducing overfitting to the training data.</p>
-<p>Because a VAE is a more complex example, we have made the code available on Github as <a href="https://github.com/fchollet/keras/blob/master/examples/variational_autoencoder.py">a standalone script</a>. Here we will review step by step how the model is created.</p>
-<p>First, here's our encoder network, mapping inputs to our latent distribution parameters:</p>
-<div class="highlight"><pre><span class="n">x</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">batch_shape</span><span class="o">=</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">original_dim</span><span class="p">))</span>
-<span class="n">h</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="n">intermediate_dim</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
-<span class="n">z_mean</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="n">latent_dim</span><span class="p">)(</span><span class="n">h</span><span class="p">)</span>
-<span class="n">z_log_sigma</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="n">latent_dim</span><span class="p">)(</span><span class="n">h</span><span class="p">)</span>
-</pre></div>
-
-
-<p>We can use these parameters to sample new similar points from the latent space:</p>
-<div class="highlight"><pre><span class="k">def</span> <span class="nf">sampling</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
-    <span class="n">z_mean</span><span class="p">,</span> <span class="n">z_log_sigma</span> <span class="o">=</span> <span class="n">args</span>
-    <span class="n">epsilon</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">random_normal</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">latent_dim</span><span class="p">),</span>
-                              <span class="n">mean</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">std</span><span class="o">=</span><span class="n">epsilon_std</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">z_mean</span> <span class="o">+</span> <span class="n">K</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">z_log_sigma</span><span class="p">)</span> <span class="o">*</span> <span class="n">epsilon</span>
-
-<span class="c"># note that &quot;output_shape&quot; isn&#39;t necessary with the TensorFlow backend</span>
-<span class="c"># so you could write `Lambda(sampling)([z_mean, z_log_sigma])`</span>
-<span class="n">z</span> <span class="o">=</span> <span class="n">Lambda</span><span class="p">(</span><span class="n">sampling</span><span class="p">,</span> <span class="n">output_shape</span><span class="o">=</span><span class="p">(</span><span class="n">latent_dim</span><span class="p">,))([</span><span class="n">z_mean</span><span class="p">,</span> <span class="n">z_log_sigma</span><span class="p">])</span>
-</pre></div>
-
-
-<p>Finally, we can map these sampled latent points back to reconstructed inputs:</p>
-<div class="highlight"><pre><span class="n">decoder_h</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="n">intermediate_dim</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">)</span>
-<span class="n">decoder_mean</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="n">original_dim</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;sigmoid&#39;</span><span class="p">)</span>
-<span class="n">h_decoded</span> <span class="o">=</span> <span class="n">decoder_h</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
-<span class="n">x_decoded_mean</span> <span class="o">=</span> <span class="n">decoder_mean</span><span class="p">(</span><span class="n">h_decoded</span><span class="p">)</span>
-</pre></div>
-
-
-<p>What we've done so far allows us to instantiate 3 models:</p>
-<ul>
-<li>an end-to-end autoencoder mapping inputs to reconstructions</li>
-<li>an encoder mapping inputs to the latent space</li>
-<li>a generator that can take points on the latent space and will output the corresponding reconstructed samples.</li>
-</ul>
-<div class="highlight"><pre><span class="c"># end-to-end autoencoder</span>
-<span class="n">vae</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x_decoded_mean</span><span class="p">)</span>
-
-<span class="c"># encoder, from inputs to latent space</span>
-<span class="n">encoder</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">z_mean</span><span class="p">)</span>
-
-<span class="c"># generator, from latent space to reconstructed inputs</span>
-<span class="n">decoder_input</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">latent_dim</span><span class="p">,))</span>
-<span class="n">_h_decoded</span> <span class="o">=</span> <span class="n">decoder_h</span><span class="p">(</span><span class="n">decoder_input</span><span class="p">)</span>
-<span class="n">_x_decoded_mean</span> <span class="o">=</span> <span class="n">decoder_mean</span><span class="p">(</span><span class="n">_h_decoded</span><span class="p">)</span>
-<span class="n">generator</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">decoder_input</span><span class="p">,</span> <span class="n">_x_decoded_mean</span><span class="p">)</span>
-</pre></div>
-
-
-<p>We train the model using the end-to-end model, with a custom loss function: the sum of a reconstruction term, and the KL divergence regularization term.</p>
-<div class="highlight"><pre><span class="k">def</span> <span class="nf">vae_loss</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x_decoded_mean</span><span class="p">):</span>
-    <span class="n">xent_loss</span> <span class="o">=</span> <span class="n">objectives</span><span class="o">.</span><span class="n">binary_crossentropy</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x_decoded_mean</span><span class="p">)</span>
-    <span class="n">kl_loss</span> <span class="o">=</span> <span class="o">-</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">K</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z_log_sigma</span> <span class="o">-</span> <span class="n">K</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">z_mean</span><span class="p">)</span> <span class="o">-</span> <span class="n">K</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">z_log_sigma</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">xent_loss</span> <span class="o">+</span> <span class="n">kl_loss</span>
-
-<span class="n">vae</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="s">&#39;rmsprop&#39;</span><span class="p">,</span> <span class="n">loss</span><span class="o">=</span><span class="n">vae_loss</span><span class="p">)</span>
-</pre></div>
-
-
-<p>We train our VAE on MNIST digits:</p>
-<div class="highlight"><pre><span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">),</span> <span class="p">(</span><span class="n">x_test</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span> <span class="o">=</span> <span class="n">mnist</span><span class="o">.</span><span class="n">load_data</span><span class="p">()</span>
-
-<span class="n">x_train</span> <span class="o">=</span> <span class="n">x_train</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s">&#39;float32&#39;</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.</span>
-<span class="n">x_test</span> <span class="o">=</span> <span class="n">x_test</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s">&#39;float32&#39;</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.</span>
-<span class="n">x_train</span> <span class="o">=</span> <span class="n">x_train</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">x_train</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">x_train</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])))</span>
-<span class="n">x_test</span> <span class="o">=</span> <span class="n">x_test</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">x_test</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">x_test</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])))</span>
-
-<span class="n">vae</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="n">x_train</span><span class="p">,</span>
-        <span class="n">shuffle</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
-        <span class="n">nb_epoch</span><span class="o">=</span><span class="n">nb_epoch</span><span class="p">,</span>
-        <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
-        <span class="n">validation_data</span><span class="o">=</span><span class="p">(</span><span class="n">x_test</span><span class="p">,</span> <span class="n">x_test</span><span class="p">))</span>
-</pre></div>
-
-
-<p>Because our latent space is two-dimensional, there are a few cool visualizations that can be done at this point. One is to look at the neighborhoods of different classes on the latent 2D plane: </p>
-<div class="highlight"><pre><span class="n">x_test_encoded</span> <span class="o">=</span> <span class="n">encoder</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">x_test</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">x_test_encoded</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">x_test_encoded</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="n">y_test</span><span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-</pre></div>
-
-
-<p><img alt="vae classes plane" src="/img/ae/vae_classes_plane.png" /></p>
-<p>Each of these colored clusters is a type of digit. Close clusters are digits that are structurally similar (i.e. digits that share information in the latent space).</p>
-<p>Because the VAE is a generative model, we can also use it to generate new digits! Here we will scan the latent plane, sampling latent points at regular intervals, and generating the corresponding digit for each of these points. This gives us a visualization of the latent manifold that "generates" the MNIST digits.</p>
-<div class="highlight"><pre><span class="c"># display a 2D manifold of the digits</span>
-<span class="n">n</span> <span class="o">=</span> <span class="mi">15</span>  <span class="c"># figure with 15x15 digits</span>
-<span class="n">digit_size</span> <span class="o">=</span> <span class="mi">28</span>
-<span class="n">figure</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">digit_size</span> <span class="o">*</span> <span class="n">n</span><span class="p">,</span> <span class="n">digit_size</span> <span class="o">*</span> <span class="n">n</span><span class="p">))</span>
-<span class="c"># we will sample n points within [-15, 15] standard deviations</span>
-<span class="n">grid_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">15</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
-<span class="n">grid_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">15</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
-
-<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">yi</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">grid_x</span><span class="p">):</span>
-    <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">xi</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">grid_y</span><span class="p">):</span>
-        <span class="n">z_sample</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">xi</span><span class="p">,</span> <span class="n">yi</span><span class="p">]])</span> <span class="o">*</span> <span class="n">epsilon_std</span>
-        <span class="n">x_decoded</span> <span class="o">=</span> <span class="n">generator</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">z_sample</span><span class="p">)</span>
-        <span class="n">digit</span> <span class="o">=</span> <span class="n">x_decoded</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">digit_size</span><span class="p">,</span> <span class="n">digit_size</span><span class="p">)</span>
-        <span class="n">figure</span><span class="p">[</span><span class="n">i</span> <span class="o">*</span> <span class="n">digit_size</span><span class="p">:</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">digit_size</span><span class="p">,</span>
-               <span class="n">j</span> <span class="o">*</span> <span class="n">digit_size</span><span class="p">:</span> <span class="p">(</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">digit_size</span><span class="p">]</span> <span class="o">=</span> <span class="n">digit</span>
-
-<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">figure</span><span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-</pre></div>
-
-
-<p><img alt="vae classes plane" src="/img/ae/vae_digits_manifold.png" /></p>
-<p>That's it folks! If you have suggestions for more topics to be covered in this post (or in future posts), you can contact me on Twitter at <a href="https://twitter.com/fchollet">@fchollet</a>.</p>
-<hr />
-<h3>References</h3>
-<p>[1] <a href="http://www.jmlr.org/papers/volume11/erhan10a/erhan10a.pdf">Why does unsupervised pre-training help deep learning?</a></p>
-<p>[2] <a href="http://arxiv.org/abs/1502.03167">Batch normalization: Accelerating deep network training by reducing internal covariate shift.</a></p>
-<p>[3] <a href="http://arxiv.org/abs/1512.03385">Deep Residual Learning for Image Recognition</a></p>
-<p>[4] <a href="http://arxiv.org/abs/1312.6114">Auto-Encoding Variational Bayes</a></p>
-        </article></aside><!-- /#featured -->
-                <h1>Other articles</h1>
-                <hr />
-                    <ol id="posts-list" class="hfeed">
+<li>a variational autoencoder ...</li></ul>
+                <a class="readmore" href="http://blog.keras.io/building-autoencoders-in-keras.html">read more</a>
+                </div><!-- /.entry-content -->
+        </article></li>
         <li><article class="hentry">
                 <header>
                         <h1><a href="http://blog.keras.io/keras-as-a-simplified-interface-to-tensorflow-tutorial.html" rel="bookmark" title="Permalink to Keras as a simplified interface to TensorFlow: tutorial">Keras as a simplified interface to TensorFlow: tutorial</a></h1>
