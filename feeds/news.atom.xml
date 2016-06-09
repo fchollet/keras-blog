@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>The Keras Blog</title><link href="http://blog.keras.io/" rel="alternate"></link><link href="http://blog.keras.io/feeds/news.atom.xml" rel="self"></link><id>http://blog.keras.io/</id><updated>2016-04-11T00:00:00+02:00</updated><entry><title>Introducing Keras 1.0</title><link href="http://blog.keras.io/introducing-keras-10.html" rel="alternate"></link><updated>2016-04-11T00:00:00+02:00</updated><author><name>Francois Chollet</name></author><id>tag:blog.keras.io,2016-04-11:introducing-keras-10.html</id><summary type="html">&lt;p&gt;Keras was initially released a year ago, late March 2015. It has made tremendous progress since, both on the development front, and as a community.&lt;/p&gt;
+&lt;p&gt;But continuous improvement isn't enough. A year of developing Keras, using Keras, and getting feedback from thousands of users has taught us a lot. To the point that we are now able to redesign it better than we could have the first time around.&lt;/p&gt;
+&lt;p&gt;And so today we are releasing Keras 1.0. It isn't a patch on top of the previous version, it is actually a re-writing of Keras nearly from scratch. It maintains backwards compatibility while introducing a series of major features, made possible by a better design under the hood.&lt;/p&gt;
+&lt;p&gt;Simplicity and accessibility have always been the targets guiding the Keras development efforts. The purpose of Keras is to make deep learning accessible to as many people as possible, by providing a set of "Lego blocks" for building Deep Learning models in a fast and simple way. Keras 1.0 pushes even further in that same direction.&lt;/p&gt;
+&lt;p&gt;The most significant feature introduced today is the functional API, a new way to define your Keras models. Get started with the functional API with &lt;a href="http://keras.io/getting-started/functional-api-guide/"&gt;this short guide&lt;/a&gt;. If you are new to Keras, first read the &lt;a href="http://keras.io/#getting-started-30-seconds-to-keras"&gt;"30 seconds to Keras" introduction&lt;/a&gt;, then read &lt;a href="http://keras.io/getting-started/sequential-model-guide/"&gt;this overview of the Sequential model&lt;/a&gt;.&lt;/p&gt;
+&lt;h2&gt;New features&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;The functional API: a simpler and more powerful way to define complex deep learning models.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Better performance. Compilation times are lower. All RNNs now come in 2 different implementations to choose from, allowing you to get maximum performance across widely different tasks and setups. And Theano RNNs can now be unrolled, yielding up to a 25% speed-up.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Modular metrics. You can know monitor arbitrary lists of metrics on arbitrary endpoints of your Keras models.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;An even better user experience. The code has been rewritten from scratch with the end user in mind at all stages. A great library UX has two components: simple, intuitive APIs (the kind that are easy to memorize), and the ability to return sensible, easy to grok error messages whenever faced with a user error.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Improved Lambda layers.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;...and much more.&lt;/p&gt;
+&lt;h2&gt;Installation&lt;/h2&gt;
+&lt;p&gt;You can install the new version from PyPI:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;pip install keras --upgrade
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Or from the master branch on GitHub:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;git clone https://github.com/fchollet/keras.git
+&lt;span class="nb"&gt;cd &lt;/span&gt;keras
+python setup.py install
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;Porting custom Keras layers&lt;/h2&gt;
+&lt;p&gt;Because the Keras internals have changed, custom Keras layers will not work with the new version. However you can port them to the new version in just a minute. Simply follow the instructions in &lt;a href="https://github.com/fchollet/keras/wiki/Porting-your-custom-layers-from-Keras-0.3-to-Keras-1.0"&gt;this guide&lt;/a&gt;.&lt;/p&gt;</summary></entry><entry><title>Keras, now running on TensorFlow</title><link href="http://blog.keras.io/keras-now-running-on-tensorflow.html" rel="alternate"></link><updated>2015-12-01T00:00:00+01:00</updated><author><name>Francois Chollet</name></author><id>tag:blog.keras.io,2015-12-01:keras-now-running-on-tensorflow.html</id><summary type="html">&lt;p&gt;The purpose of Keras is to be a model-level framework, providing a set of "Lego blocks" for building Deep Learning models in a fast and straightforward way.
+Among Deep Learning frameworks, Keras is resolutely high up on the ladder of abstraction.&lt;/p&gt;
+&lt;p&gt;As such, Keras does not handle itself low-level tensor operations, such as tensor products and convolutions.
+Other teams have developed excellent solutions to the tensor manipulation problem, such as &lt;a href="http://deeplearning.net/software/theano/"&gt;Theano&lt;/a&gt; (from the LISA/MILA lab of Université de Montréal) and recently &lt;a href="http://www.tensorflow.org/"&gt;TensorFlow&lt;/a&gt; (from Google). &lt;/p&gt;
+&lt;p&gt;When we started Keras in March 2015, Theano was the natural choice. At the time, it was the only framework with everything we sought: a Python-based interface, autodifferentiation, and the ability to run the same code on CPU and GPU seamlessly. It was also well-optimized and competitively fast.&lt;/p&gt;
+&lt;p&gt;Since then, there has been a lot of innovation in the symbolic tensor computation space --a lot of it in the footsteps of Theano. Most notably, we've seen two new frameworks appear, Neon from Nervana Systems and TensorFlow from Google. While Neon is the faster framework right now, TensorFlow has the engineering weight of Google behind it and there is no doubt that it will improve considerably over the next few months.&lt;/p&gt;
+&lt;p&gt;It has become time for Keras to take advantage of these advances. Over the past two weeks, we've abstracted the tensor-manipulation backend of Keras, and we've written two implementations of this backend, one in Theano and the other in TensorFlow. A Neon one might be coming soon as well.&lt;/p&gt;
+&lt;h2&gt;What this means for you&lt;/h2&gt;
+&lt;p&gt;If you had any models written in vanilla Keras, you can now run them in TensorFlow with no changes on your part. Yes, really. There are a couple of temporary caveats (see "known issues"), but only a small minority of models will be concerned. And of course, you can keep running your models on Theano as you did before.&lt;/p&gt;
+&lt;p&gt;It also means that any performance improvement on the TensorFlow side henceforth will benefit you and your research. You too, now, as a user of Keras, are riding the Google rocketship.&lt;/p&gt;
+&lt;p&gt;And at last, it means that you will soon be able to easily export your Keras models to mobile devices, or even to a tractor (&lt;a href="https://twitter.com/iamtrask/status/669984166633734144"&gt;deep learners from Tennessee&lt;/a&gt;, rejoice), as soon as this support is enabled in open-source TensorFlow. Robotics is likely to be one major field of application of Deep Learning in the coming years.&lt;/p&gt;
+&lt;h2&gt;Performance&lt;/h2&gt;
+&lt;p&gt;On CPU, here's what performance looks like right now on &lt;a href="https://github.com/fchollet/keras/tree/master/examples"&gt;some basic examples scripts&lt;/a&gt;. This on a 2.2 GHz Intel Core i7.&lt;/p&gt;
+&lt;p&gt;In summary: Theano has well-optimized tensor loops compared to TensorFlow, but relies on a poorly-performing CPU convolution operation (of course, few people would actually attempt to train convnets on CPU, although with TensorFlow it wouldn't be too unrealistic).&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Task&lt;/th&gt;
+&lt;th&gt;TensorFlow&lt;/th&gt;
+&lt;th&gt;Theano&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;mnist_mlp.py: compilation (s)&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;0.6&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;5.9&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;mnist_mlp.py: runtime/epoch (s)&lt;/td&gt;
+&lt;td&gt;7.5&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;6.3&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;imdb_lstm.py: compilation (s)&lt;/td&gt;
+&lt;td&gt;39.3&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;38.3&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;imdb_lstm.py: runtime/epoch (s)&lt;/td&gt;
+&lt;td&gt;283&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;123&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;mnist_cnn.py: compilation (s)&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;0.8&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;11.4&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;mnist_cnn.py: runtime/epoch (s)&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;190&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;3230&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;A similar benchmark on GPU will be added soon.&lt;/p&gt;
+&lt;h2&gt;Known issues&lt;/h2&gt;
+&lt;p&gt;Due to current limitations of TensorFlow, not all Keras features will work in TensorFlow right now. &lt;strong&gt;However, these limitations are being fixed as we speak, and will be lifted in upcoming TensorFlow releases&lt;/strong&gt;. If you need any of the features below, you'll have to wait a little bit before switching to TensorFlow.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;the &lt;code&gt;dot&lt;/code&gt; mode in &lt;code&gt;Merge&lt;/code&gt; won't work in TensorFlow.&lt;/li&gt;
+&lt;li&gt;Masking in RNNs won't work in TensorFlow &lt;strong&gt;[January 2016 update: it does work now.]&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;When using RNNs in TensorFlow, you will need to explicitely define the number of timesteps per sequence.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;There is also one issue that might take a bit more time to understand and fix: the weights of convolutional models saved with Theano can't be successfully loaded in TensorFlow, and reciprocally. We're investigating it right now.&lt;/p&gt;
+&lt;h2&gt;Try it now&lt;/h2&gt;
+&lt;p&gt;To use the TensorFlow backend, just update Keras, then see &lt;a href="http://keras.io/backend/#switching-from-one-backend-to-another"&gt;these instructions&lt;/a&gt;.&lt;/p&gt;</summary></entry></feed>
