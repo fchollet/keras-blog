@@ -89,7 +89,7 @@ Let's look at an example right away:
 from keras.preprocessing.image import ImageDataGenerator
 
 datagen = ImageDataGenerator(
-        rotation_range=0.2,
+        rotation_range=40,
         width_shift_range=0.2,
         height_shift_range=0.2,
         rescale=1./255,
@@ -115,7 +115,7 @@ Now let's start generating some pictures using this tool and save them to a temp
 from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
 
 datagen = ImageDataGenerator(
-        rotation_range=0.2,
+        rotation_range=40,
         width_shift_range=0.2,
         height_shift_range=0.2,
         shear_range=0.2,
