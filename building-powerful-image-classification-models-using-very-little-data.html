@@ -125,7 +125,7 @@ The current literature suggests machine classifiers can score above 80% accuracy
 <div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras.preprocessing.image</span> <span class="kn">import</span> <span class="n">ImageDataGenerator</span>
 
 <span class="n">datagen</span> <span class="o">=</span> <span class="n">ImageDataGenerator</span><span class="p">(</span>
-        <span class="n">rotation_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">rotation_range</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span>
         <span class="n">width_shift_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
         <span class="n">height_shift_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
         <span class="n">rescale</span><span class="o">=</span><span class="mf">1.</span><span class="o">/</span><span class="mi">255</span><span class="p">,</span>
@@ -150,7 +150,7 @@ The current literature suggests machine classifiers can score above 80% accuracy
 <div class="highlight"><pre><span class="kn">from</span> <span class="nn">keras.preprocessing.image</span> <span class="kn">import</span> <span class="n">ImageDataGenerator</span><span class="p">,</span> <span class="n">array_to_img</span><span class="p">,</span> <span class="n">img_to_array</span><span class="p">,</span> <span class="n">load_img</span>
 
 <span class="n">datagen</span> <span class="o">=</span> <span class="n">ImageDataGenerator</span><span class="p">(</span>
-        <span class="n">rotation_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">rotation_range</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span>
         <span class="n">width_shift_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
         <span class="n">height_shift_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
         <span class="n">shear_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
