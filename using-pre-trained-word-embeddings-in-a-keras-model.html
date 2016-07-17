@@ -152,7 +152,7 @@ rec.sport.hockey
 
 
 <hr />
-<h1>Preparing the Embedding layer</h1>
+<h2>Preparing the Embedding layer</h2>
 <p>Next, we compute an index mapping words to known embeddings, by parsing the data dump of pre-trained embeddings:</p>
 <div class="highlight"><pre><span class="n">embeddings_index</span> <span class="o">=</span> <span class="p">{}</span>
 <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">GLOVE_DIR</span><span class="p">,</span> <span class="s">&#39;glove.6B.100d.txt&#39;</span><span class="p">))</span>
@@ -191,7 +191,7 @@ rec.sport.hockey
 <p>Note that an <code>Embedding</code> layer should be fed sequences of integers, i.e. a 2D input of shape <code>(samples, indices)</code>. These input sequences should be padded so that they all have the same length in a batch of input data (although an <code>Embedding</code> layer is capable of processing sequence of heterogenous length, if you don't pass an explicit <code>input_length</code> argument to the layer).</p>
 <p>All that the <code>Embedding</code> layer does is to map the integer inputs to the vectors found at the corresponding index in the embedding matrix, i.e. the sequence <code>[1, 2]</code> would be converted to <code>[embeddings[1], embeddings[2]]</code>. This means that the output of the <code>Embedding</code> layer will be a 3D tensor of shape <code>(samples, sequence_length, embedding_dim)</code>.</p>
 <hr />
-<h1>Training a 1D convnet</h1>
+<h2>Training a 1D convnet</h2>
 <p>Finally we can then build a small 1D convnet to solve our classification problem:</p>
 <div class="highlight"><pre><span class="n">sequence_input</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">MAX_SEQUENCE_LENGTH</span><span class="p">,),</span> <span class="n">dtype</span><span class="o">=</span><span class="s">&#39;int32&#39;</span><span class="p">)</span>
 <span class="n">embedded_sequences</span> <span class="o">=</span> <span class="n">embedding_layer</span><span class="p">(</span><span class="n">sequence_input</span><span class="p">)</span>

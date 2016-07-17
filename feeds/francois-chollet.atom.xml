@@ -92,7 +92,7 @@ rec.sport.hockey
 
 
 &lt;hr /&gt;
-&lt;h1&gt;Preparing the Embedding layer&lt;/h1&gt;
+&lt;h2&gt;Preparing the Embedding layer&lt;/h2&gt;
 &lt;p&gt;Next, we compute an index mapping words to known embeddings, by parsing the data dump of pre-trained embeddings:&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;embeddings_index&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;{}&lt;/span&gt;
 &lt;span class="n"&gt;f&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;open&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;os&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;path&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;join&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;GLOVE_DIR&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;glove.6B.100d.txt&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
@@ -131,7 +131,7 @@ rec.sport.hockey
 &lt;p&gt;Note that an &lt;code&gt;Embedding&lt;/code&gt; layer should be fed sequences of integers, i.e. a 2D input of shape &lt;code&gt;(samples, indices)&lt;/code&gt;. These input sequences should be padded so that they all have the same length in a batch of input data (although an &lt;code&gt;Embedding&lt;/code&gt; layer is capable of processing sequence of heterogenous length, if you don't pass an explicit &lt;code&gt;input_length&lt;/code&gt; argument to the layer).&lt;/p&gt;
 &lt;p&gt;All that the &lt;code&gt;Embedding&lt;/code&gt; layer does is to map the integer inputs to the vectors found at the corresponding index in the embedding matrix, i.e. the sequence &lt;code&gt;[1, 2]&lt;/code&gt; would be converted to &lt;code&gt;[embeddings[1], embeddings[2]]&lt;/code&gt;. This means that the output of the &lt;code&gt;Embedding&lt;/code&gt; layer will be a 3D tensor of shape &lt;code&gt;(samples, sequence_length, embedding_dim)&lt;/code&gt;.&lt;/p&gt;
 &lt;hr /&gt;
-&lt;h1&gt;Training a 1D convnet&lt;/h1&gt;
+&lt;h2&gt;Training a 1D convnet&lt;/h2&gt;
 &lt;p&gt;Finally we can then build a small 1D convnet to solve our classification problem:&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;sequence_input&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;Input&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;shape&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;MAX_SEQUENCE_LENGTH&lt;/span&gt;&lt;span class="p"&gt;,),&lt;/span&gt; &lt;span class="n"&gt;dtype&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;int32&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 &lt;span class="n"&gt;embedded_sequences&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;embedding_layer&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;sequence_input&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
