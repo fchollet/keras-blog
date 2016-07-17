@@ -12,7 +12,7 @@ The full code for this tutorial is [available on Github](https://github.com/fcho
 
 ## What are word embeddings?
 
-"Word embeddings" are a family of natural language processing techniques aiming at mapping semantic meaning into a geometric space. This is done by associating a numeric vector to every word in a dictionary, such that the distance (e.g. L2 distance or more cosine distance) between any two vectors would capture part of the semantic relationship between the two associated words. The geometric space formed by these vectors is called an *embedding space*.
+"Word embeddings" are a family of natural language processing techniques aiming at mapping semantic meaning into a geometric space. This is done by associating a numeric vector to every word in a dictionary, such that the distance (e.g. L2 distance or more commonly cosine distance) between any two vectors would capture part of the semantic relationship between the two associated words. The geometric space formed by these vectors is called an *embedding space*.
 
 For instance, "coconut" and "polar bear" are words that are semantically quite different, so a reasonable embedding space would represent them as vectors that would be very far apart. But "kitchen" and "dinner" are related words, so they should be embedded close to each other.
 
@@ -55,7 +55,7 @@ rec.sport.hockey
 
 Here's how we will solve the classification problem:
 
-- convert all text samples in the dataset into sequences of word indices. A "word index" would simply be an integer ID for the word. We will only consider the top 20,000 most commonly occuring words in the dataset, and we will truncate the sequence to a maximum length of 1000 words.
+- convert all text samples in the dataset into sequences of word indices. A "word index" would simply be an integer ID for the word. We will only consider the top 20,000 most commonly occuring words in the dataset, and we will truncate the sequences to a maximum length of 1000 words.
 - prepare an "embedding matrix" which will contain at index `i` the embedding vector for the word of index `i` in our word index.
 - load this embedding matrix into a Keras `Embedding` layer, set to be frozen (its weights, the embedding vectors, will not be updated during training).
 - build on top of it a 1D convolutional neural network, ending in a softmax output over our 20 categories.
@@ -162,7 +162,7 @@ embedding_layer = Embedding(len(word_index) + 1,
                             trainable=False)
 ```
 
-Note that an `Embedding` layer should be fed sequences of integers, i.e. a 2D input of shape `(samples, indices)`. These input sequences should be padded so that they all have the same length in a batch of input data (although an `Embedding` layer is capable of processing sequence of heterogenous length, if you don't pass an explicit `input_length` argument to the layer).
+An `Embedding` layer should be fed sequences of integers, i.e. a 2D input of shape `(samples, indices)`. These input sequences should be padded so that they all have the same length in a batch of input data (although an `Embedding` layer is capable of processing sequence of heterogenous length, if you don't pass an explicit `input_length` argument to the layer).
 
 All that the `Embedding` layer does is to map the integer inputs to the vectors found at the corresponding index in the embedding matrix, i.e. the sequence `[1, 2]` would be converted to `[embeddings[1], embeddings[2]]`. This means that the output of the `Embedding` layer will be a 3D tensor of shape `(samples, sequence_length, embedding_dim)`.
 
@@ -195,7 +195,7 @@ model.fit(x_train, y_train, validation_data=(x_val, y_val),
           nb_epoch=2, batch_size=128)
 ```
 
-This model reaches **95% classification accuracy** after only 2 epochs.
+This model reaches **95% classification accuracy** on the validation set after only 2 epochs. You could probably get to an even higher accuracy by training longer with some regularization mechanism (such as dropout) or by fine-tuning the `Embedding` layer.
 
 We can also test how well we would have performed by not using pre-trained word embeddings, but instead initializing our `Embedding` layer from scratch and learning its weights during training. We just need to replace our `Embedding` layer with the following:
 
