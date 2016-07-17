@@ -122,7 +122,7 @@ y_val = labels[-nb_validation_samples:]
 
 ----
 
-# Preparing the Embedding layer
+## Preparing the Embedding layer
 
 Next, we compute an index mapping words to known embeddings, by parsing the data dump of pre-trained embeddings:
 
@@ -168,7 +168,7 @@ All that the `Embedding` layer does is to map the integer inputs to the vectors 
 
 ----
 
-# Training a 1D convnet
+## Training a 1D convnet
 
 Finally we can then build a small 1D convnet to solve our classification problem:
 
