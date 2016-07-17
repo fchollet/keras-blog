@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-        <title>The Keras Blog</title>
+        <title>Using pre-trained word embeddings in a Keras model</title>
         <meta charset="utf-8" />
         <link rel="stylesheet" href="http://blog.keras.io/theme/css/main.css" type="text/css" />
         <link rel="stylesheet" href="http://blog.keras.io/theme/css/pygment.css" type="text/css" />
@@ -44,9 +44,11 @@
                 </ul></nav>
         </header><!-- /#banner -->
 
-     <section id="content" class="body">
-        <aside id="featured"><article>
-                <h1 class="entry-title"><a href="http://blog.keras.io/using-pre-trained-word-embeddings-in-a-keras-model.html">Using pre-trained word embeddings in a Keras model</a></h1>
+<section id="content" class="body">
+<article>
+        <header> <h1 class="entry-title"><a href="using-pre-trained-word-embeddings-in-a-keras-model.html"
+        rel="bookmark" title="Permalink to Using pre-trained word embeddings in a Keras model">Using pre-trained word embeddings in a Keras model</a></h1>  </header>
+        <div class="entry-content">
 <footer class="post-info">
         <abbr class="published" title="2016-07-16T00:00:00+02:00">
                 Sat 16 July 2016
@@ -57,7 +59,7 @@
         </address>
 <p>In <a href="http://blog.keras.io/category/tutorials.html">Tutorials</a>. </p>
 </p></footer><!-- /.post-info --><!-- /.post-info -->
-                <p>In this tutorial, we will walk you through the process of solving a text classification problem using pre-trained word embeddings and a convolutional neural network.</p>
+        <p>In this tutorial, we will walk you through the process of solving a text classification problem using pre-trained word embeddings and a convolutional neural network.</p>
 <hr />
 <h2>What are word embeddings?</h2>
 <p>"Word embeddings" are a family of natural language processing techniques aiming at mapping semantic meaning into a geometric space. This is done by associating a numeric vector to every word in a dictionary, such that the distance (e.g. L2 distance or more cosine distance) between any two vectors would capture part of the semantic relationship between the two associated words. The geometric space formed by these vectors is called an <em>embedding space</em>.</p>
@@ -222,167 +224,10 @@ rec.sport.hockey
 
 
 <p>After 2 epochs, this approach only gets us to <strong>90% validation accuracy</strong>, less than what the previous model could reach in just one epoch. Our pre-trained embeddings were definitely buying us something. In general, using pre-trained embeddings is relevant for natural processing tasks were little training data is available (functionally the embeddings act as an injection of outside information which might prove useful for your model).</p>
-        </article></aside><!-- /#featured -->
-                <h1>Other articles</h1>
-                <hr />
-                    <ol id="posts-list" class="hfeed">
-        <li><article class="hentry">
-                <header>
-                        <h1><a href="http://blog.keras.io/on-the-importance-of-democratizing-artificial-intelligence.html" rel="bookmark" title="Permalink to On the importance of democratizing Artificial Intelligence">On the importance of democratizing Artificial Intelligence</a></h1>
-                </header>
+        </div><!-- /.entry-content -->
 
-                <div class="entry-content">
-<footer class="post-info">
-        <abbr class="published" title="2016-07-06T00:00:00+02:00">
-                Wed 06 July 2016
-        </abbr>
-
-        <address class="vcard author">
-                By <a class="url fn" href="https://twitter.com/fchollet">Francois Chollet</a>
-        </address>
-<p>In <a href="http://blog.keras.io/category/essays.html">Essays</a>. </p>
-</p></footer><!-- /.post-info --><!-- /.post-info -->
-                <p>We all know about the incredible progress that deep learning has made in recent years. In just 5 years, we went from near-unusable speech recognition and image recognition, to near-human accuracy. We went from machines that couldn't beat a serious Go player, to beating a world champion. We went ...</p>
-                <a class="readmore" href="http://blog.keras.io/on-the-importance-of-democratizing-artificial-intelligence.html">read more</a>
-                </div><!-- /.entry-content -->
-        </article></li>
-        <li><article class="hentry">
-                <header>
-                        <h1><a href="http://blog.keras.io/building-powerful-image-classification-models-using-very-little-data.html" rel="bookmark" title="Permalink to Building powerful image classification models using very little data">Building powerful image classification models using very little data</a></h1>
-                </header>
-
-                <div class="entry-content">
-<footer class="post-info">
-        <abbr class="published" title="2016-06-05T00:00:00+02:00">
-                Sun 05 June 2016
-        </abbr>
-
-        <address class="vcard author">
-                By <a class="url fn" href="https://twitter.com/fchollet">Francois Chollet</a>
-        </address>
-<p>In <a href="http://blog.keras.io/category/tutorials.html">Tutorials</a>. </p>
-</p></footer><!-- /.post-info --><!-- /.post-info -->
-                <p>In this tutorial, we will present a few simple yet effective methods that you can use to build a powerful image classifier, using only very few training examples --just a few hundred or thousand pictures from each class you want to be able to recognize. </p>
-<p>We will go over the ...</p>
-                <a class="readmore" href="http://blog.keras.io/building-powerful-image-classification-models-using-very-little-data.html">read more</a>
-                </div><!-- /.entry-content -->
-        </article></li>
-        <li><article class="hentry">
-                <header>
-                        <h1><a href="http://blog.keras.io/building-autoencoders-in-keras.html" rel="bookmark" title="Permalink to Building Autoencoders in Keras">Building Autoencoders in Keras</a></h1>
-                </header>
-
-                <div class="entry-content">
-<footer class="post-info">
-        <abbr class="published" title="2016-05-14T00:00:00+02:00">
-                Sat 14 May 2016
-        </abbr>
-
-        <address class="vcard author">
-                By <a class="url fn" href="https://twitter.com/fchollet">Francois Chollet</a>
-        </address>
-<p>In <a href="http://blog.keras.io/category/tutorials.html">Tutorials</a>. </p>
-</p></footer><!-- /.post-info --><!-- /.post-info -->
-                <p>In this tutorial, we will answer some common questions about autoencoders, and we will cover code examples of the following models:</p>
-<ul>
-<li>a simple autoencoder based on a fully-connected layer</li>
-<li>a sparse autoencoder</li>
-<li>a deep fully-connected autoencoder</li>
-<li>a deep convolutional autoencoder</li>
-<li>an image denoising model</li>
-<li>a sequence-to-sequence autoencoder</li>
-<li>a variational autoencoder ...</li></ul>
-                <a class="readmore" href="http://blog.keras.io/building-autoencoders-in-keras.html">read more</a>
-                </div><!-- /.entry-content -->
-        </article></li>
-        <li><article class="hentry">
-                <header>
-                        <h1><a href="http://blog.keras.io/keras-as-a-simplified-interface-to-tensorflow-tutorial.html" rel="bookmark" title="Permalink to Keras as a simplified interface to TensorFlow: tutorial">Keras as a simplified interface to TensorFlow: tutorial</a></h1>
-                </header>
-
-                <div class="entry-content">
-<footer class="post-info">
-        <abbr class="published" title="2016-04-24T00:00:00+02:00">
-                Sun 24 April 2016
-        </abbr>
-
-        <address class="vcard author">
-                By <a class="url fn" href="https://twitter.com/fchollet">Francois Chollet</a>
-        </address>
-<p>In <a href="http://blog.keras.io/category/tutorials.html">Tutorials</a>. </p>
-</p></footer><!-- /.post-info --><!-- /.post-info -->
-                <h1>A complete guide to using Keras as part of a TensorFlow workflow</h1>
-<p>If TensorFlow is your primary framework, and you are looking for a simple &amp; high-level model definition interface to make your life easier, this tutorial is for you.</p>
-<p>Keras layers and models are fully compatible with pure-TensorFlow tensors, and ...</p>
-                <a class="readmore" href="http://blog.keras.io/keras-as-a-simplified-interface-to-tensorflow-tutorial.html">read more</a>
-                </div><!-- /.entry-content -->
-        </article></li>
-        <li><article class="hentry">
-                <header>
-                        <h1><a href="http://blog.keras.io/introducing-keras-10.html" rel="bookmark" title="Permalink to Introducing Keras 1.0">Introducing Keras 1.0</a></h1>
-                </header>
-
-                <div class="entry-content">
-<footer class="post-info">
-        <abbr class="published" title="2016-04-11T00:00:00+02:00">
-                Mon 11 April 2016
-        </abbr>
-
-        <address class="vcard author">
-                By <a class="url fn" href="https://twitter.com/fchollet">Francois Chollet</a>
-        </address>
-<p>In <a href="http://blog.keras.io/category/news.html">News</a>. </p>
-</p></footer><!-- /.post-info --><!-- /.post-info -->
-                <p>Keras was initially released a year ago, late March 2015. It has made tremendous progress since, both on the development front, and as a community.</p>
-<p>But continuous improvement isn't enough. A year of developing Keras, using Keras, and getting feedback from thousands of users has taught us a lot ...</p>
-                <a class="readmore" href="http://blog.keras.io/introducing-keras-10.html">read more</a>
-                </div><!-- /.entry-content -->
-        </article></li>
-        <li><article class="hentry">
-                <header>
-                        <h1><a href="http://blog.keras.io/how-convolutional-neural-networks-see-the-world.html" rel="bookmark" title="Permalink to How convolutional neural networks see the world">How convolutional neural networks see the world</a></h1>
-                </header>
-
-                <div class="entry-content">
-<footer class="post-info">
-        <abbr class="published" title="2016-01-30T00:00:00+01:00">
-                Sat 30 January 2016
-        </abbr>
-
-        <address class="vcard author">
-                By <a class="url fn" href="https://twitter.com/fchollet">Francois Chollet</a>
-        </address>
-<p>In <a href="http://blog.keras.io/category/demo.html">Demo</a>. </p>
-</p></footer><!-- /.post-info --><!-- /.post-info -->
-                <h2>An exploration of convnet filters with Keras</h2>
-<p>In this post, we take a look at what deep convolutional neural networks (convnets) really learn, and how they understand the images we feed them. We will use Keras to visualize inputs that maximize the activation of the filters in different layers of ...</p>
-                <a class="readmore" href="http://blog.keras.io/how-convolutional-neural-networks-see-the-world.html">read more</a>
-                </div><!-- /.entry-content -->
-        </article></li>
-        <li><article class="hentry">
-                <header>
-                        <h1><a href="http://blog.keras.io/keras-now-running-on-tensorflow.html" rel="bookmark" title="Permalink to Keras, now running on TensorFlow">Keras, now running on TensorFlow</a></h1>
-                </header>
-
-                <div class="entry-content">
-<footer class="post-info">
-        <abbr class="published" title="2015-12-01T00:00:00+01:00">
-                Tue 01 December 2015
-        </abbr>
-
-        <address class="vcard author">
-                By <a class="url fn" href="https://twitter.com/fchollet">Francois Chollet</a>
-        </address>
-<p>In <a href="http://blog.keras.io/category/news.html">News</a>. </p>
-</p></footer><!-- /.post-info --><!-- /.post-info -->
-                <p>The purpose of Keras is to be a model-level framework, providing a set of "Lego blocks" for building Deep Learning models in a fast and straightforward way.
-Among Deep Learning frameworks, Keras is resolutely high up on the ladder of abstraction.</p>
-<p>As such, Keras does not handle itself low-level tensor ...</p>
-                <a class="readmore" href="http://blog.keras.io/keras-now-running-on-tensorflow.html">read more</a>
-                </div><!-- /.entry-content -->
-        </article></li>
-</ol><!-- /#posts-list -->
-</section><!-- /#content -->
+</article>
+</section>
 
         <footer id="footer" class="body">
                 <address id="about" class="vcard body">
