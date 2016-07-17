@@ -63,7 +63,7 @@
 <p>The full code for this tutorial is <a href="https://github.com/fchollet/keras/blob/master/examples/pretrained_word_embeddings.py">available on Github</a>.</p>
 <hr />
 <h2>What are word embeddings?</h2>
-<p>"Word embeddings" are a family of natural language processing techniques aiming at mapping semantic meaning into a geometric space. This is done by associating a numeric vector to every word in a dictionary, such that the distance (e.g. L2 distance or more cosine distance) between any two vectors would capture part of the semantic relationship between the two associated words. The geometric space formed by these vectors is called an <em>embedding space</em>.</p>
+<p>"Word embeddings" are a family of natural language processing techniques aiming at mapping semantic meaning into a geometric space. This is done by associating a numeric vector to every word in a dictionary, such that the distance (e.g. L2 distance or more commonly cosine distance) between any two vectors would capture part of the semantic relationship between the two associated words. The geometric space formed by these vectors is called an <em>embedding space</em>.</p>
 <p>For instance, "coconut" and "polar bear" are words that are semantically quite different, so a reasonable embedding space would represent them as vectors that would be very far apart. But "kitchen" and "dinner" are related words, so they should be embedded close to each other.</p>
 <p>Ideally, in a good embeddings space, the "path" (a vector) to go from "kitchen" and "dinner" would capture precisely the semantic relationship between these two concepts. In this case the relationship is "where x occurs", so you would expect the vector <code>kitchen - dinner</code> (difference of the two embedding vectors, i.e. path to go from dinner to kitchen) to capture this "where x occurs" relationship. Basically, we should have the vectorial identity: <code>dinner + (where x occurs) = kitchen</code> (at least approximately). If that's indeed the case, then we can use such a relationship vector to answer questions. For instance, starting from a new vector, e.g. "work", and applying this relationship vector, we should get sometime meaningful, e.g. <code>work + (where x occurs) = office</code>, answering "where does work occur?".</p>
 <p>Word embeddings are computed by applying dimensionality reduction techniques to datasets of co-occurence statistics between words in a corpus of text. This can be done via neural networks (the "word2vec" technique), or via matrix factorization.</p>
@@ -92,7 +92,7 @@ rec.sport.hockey
 <h2>Approach</h2>
 <p>Here's how we will solve the classification problem:</p>
 <ul>
-<li>convert all text samples in the dataset into sequences of word indices. A "word index" would simply be an integer ID for the word. We will only consider the top 20,000 most commonly occuring words in the dataset, and we will truncate the sequence to a maximum length of 1000 words.</li>
+<li>convert all text samples in the dataset into sequences of word indices. A "word index" would simply be an integer ID for the word. We will only consider the top 20,000 most commonly occuring words in the dataset, and we will truncate the sequences to a maximum length of 1000 words.</li>
 <li>prepare an "embedding matrix" which will contain at index <code>i</code> the embedding vector for the word of index <code>i</code> in our word index.</li>
 <li>load this embedding matrix into a Keras <code>Embedding</code> layer, set to be frozen (its weights, the embedding vectors, will not be updated during training).</li>
 <li>build on top of it a 1D convolutional neural network, ending in a softmax output over our 20 categories.</li>
@@ -188,7 +188,7 @@ rec.sport.hockey
 </pre></div>
 
 
-<p>Note that an <code>Embedding</code> layer should be fed sequences of integers, i.e. a 2D input of shape <code>(samples, indices)</code>. These input sequences should be padded so that they all have the same length in a batch of input data (although an <code>Embedding</code> layer is capable of processing sequence of heterogenous length, if you don't pass an explicit <code>input_length</code> argument to the layer).</p>
+<p>An <code>Embedding</code> layer should be fed sequences of integers, i.e. a 2D input of shape <code>(samples, indices)</code>. These input sequences should be padded so that they all have the same length in a batch of input data (although an <code>Embedding</code> layer is capable of processing sequence of heterogenous length, if you don't pass an explicit <code>input_length</code> argument to the layer).</p>
 <p>All that the <code>Embedding</code> layer does is to map the integer inputs to the vectors found at the corresponding index in the embedding matrix, i.e. the sequence <code>[1, 2]</code> would be converted to <code>[embeddings[1], embeddings[2]]</code>. This means that the output of the <code>Embedding</code> layer will be a 3D tensor of shape <code>(samples, sequence_length, embedding_dim)</code>.</p>
 <hr />
 <h2>Training a 1D convnet</h2>
@@ -216,7 +216,7 @@ rec.sport.hockey
 </pre></div>
 
 
-<p>This model reaches <strong>95% classification accuracy</strong> after only 2 epochs.</p>
+<p>This model reaches <strong>95% classification accuracy</strong> on the validation set after only 2 epochs. You could probably get to an even higher accuracy by training longer with some regularization mechanism (such as dropout) or by fine-tuning the <code>Embedding</code> layer.</p>
 <p>We can also test how well we would have performed by not using pre-trained word embeddings, but instead initializing our <code>Embedding</code> layer from scratch and learning its weights during training. We just need to replace our <code>Embedding</code> layer with the following:</p>
 <div class="highlight"><pre><span class="n">embedding_layer</span> <span class="o">=</span> <span class="n">Embedding</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">word_index</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
                             <span class="n">EMBEDDING_DIM</span><span class="p">,</span>
