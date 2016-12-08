@@ -13,13 +13,13 @@ Keras layers and models are fully compatible with pure-TensorFlow tensors, and a
 
 We will cover the following points:
 
-[I: Calling Keras layers on TensorFlow tensors](/#calling-keras-layers-on-tensorflow-tensors)
+[I: Calling Keras layers on TensorFlow tensors](#calling-keras-layers-on-tensorflow-tensors)
 
-[II: Using Keras models with TensorFlow](/#using-keras-models-with-tensorflow)
+[II: Using Keras models with TensorFlow](#using-keras-models-with-tensorflow)
 
-[III: Multi-GPU and distributed training](/#multi-gpu-and-distributed-training)
+[III: Multi-GPU and distributed training](#multi-gpu-and-distributed-training)
 
-[IV: Exporting a model with TensorFlow-serving](/#exporting-a-model-with-tensorflow-serving)
+[IV: Exporting a model with TensorFlow-serving](#exporting-a-model-with-tensorflow-serving)
 
 
 ![keras+tensorflow](/img/keras-tensorflow-logo.jpg)
