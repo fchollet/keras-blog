@@ -8,6 +8,9 @@ In this tutorial, we will walk you through the process of solving a text classif
 
 The full code for this tutorial is [available on Github](https://github.com/fchollet/keras/blob/master/examples/pretrained_word_embeddings.py).
 
+
+**Note: all code examples have been updated to the Keras 2.0 API on March 14, 2017. You will need Keras version 2.0.0 or higher to run them.**
+
 ----
 
 ## What are word embeddings?
@@ -192,7 +195,7 @@ model.compile(loss='categorical_crossentropy',
 
 # happy learning!
 model.fit(x_train, y_train, validation_data=(x_val, y_val),
-          nb_epoch=2, batch_size=128)
+          epochs=2, batch_size=128)
 ```
 
 This model reaches **95% classification accuracy** on the validation set after only 2 epochs. You could probably get to an even higher accuracy by training longer with some regularization mechanism (such as dropout) or by fine-tuning the `Embedding` layer.

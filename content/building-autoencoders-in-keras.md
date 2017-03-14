@@ -13,6 +13,8 @@ In this tutorial, we will answer some common questions about autoencoders, and w
 - a sequence-to-sequence autoencoder
 - a variational autoencoder
 
+**Note: all code examples have been updated to the Keras 2.0 API on March 14, 2017. You will need Keras version 2.0.0 or higher to run them.**
+
 ----
 
 ## What are autoencoders?
@@ -72,14 +74,14 @@ encoded = Dense(encoding_dim, activation='relu')(input_img)
 decoded = Dense(784, activation='sigmoid')(encoded)
 
 # this model maps an input to its reconstruction
-autoencoder = Model(input=input_img, output=decoded)
+autoencoder = Model(input_img, decoded)
 ```
 
 Let's also create a separate encoder model:
 
 ```python
 # this model maps an input to its encoded representation
-encoder = Model(input=input_img, output=encoded)
+encoder = Model(input_img, encoded)
 ```
 
 As well as the decoder model:
@@ -89,7 +91,7 @@ encoded_input = Input(shape=(encoding_dim,))
 # retrieve the last layer of the autoencoder model
 decoder_layer = autoencoder.layers[-1]
 # create the decoder model
-decoder = Model(input=encoded_input, output=decoder_layer(encoded_input))
+decoder = Model(encoded_input, decoder_layer(encoded_input))
 ```
 
 Now let's train our autoencoder to reconstruct MNIST digits. 
@@ -121,7 +123,7 @@ Now let's train our autoencoder for 50 epochs:
 
 ```python
 autoencoder.fit(x_train, x_train,
-                nb_epoch=50,
+                epochs=50,
                 batch_size=256,
                 shuffle=True,
                 validation_data=(x_test, x_test))
@@ -177,10 +179,10 @@ encoding_dim = 32
 input_img = Input(shape=(784,))
 # add a Dense layer with a L1 activity regularizer
 encoded = Dense(encoding_dim, activation='relu',
-                activity_regularizer=regularizers.activity_l1(10e-5))(input_img)
+                activity_regularizer=regularizers.l1(10e-5))(input_img)
 decoded = Dense(784, activation='sigmoid')(encoded)
 
-autoencoder = Model(input=input_img, output=decoded)
+autoencoder = Model(input_img, decoded)
 ```
 
 Let's train this model for 100 epochs (with the added regularization the model is less likely to overfit and can be trained longer). The models ends with a train loss of `0.11` and test loss of `0.10`. The difference between the two is mostly due to the regularization term being added to the loss during training (worth about 0.01).
@@ -211,11 +213,11 @@ decoded = Dense(784, activation='sigmoid')(decoded)
 Let's try this:
 
 ```python
-autoencoder = Model(input=input_img, output=decoded)
+autoencoder = Model(input_img, decoded)
 autoencoder.compile(optimizer='adadelta', loss='binary_crossentropy')
 
 autoencoder.fit(x_train, x_train,
-                nb_epoch=100,
+                epochs=100,
                 batch_size=256,
                 shuffle=True,
                 validation_data=(x_test, x_test))
@@ -231,30 +233,31 @@ After 100 epochs, it reaches a train and test loss of ~0.097, a bit better than 
 
 Since our inputs are images, it makes sense to use convolutional neural networks (convnets) as encoders and decoders. In practical settings, autoencoders applied to images are always convolutional autoencoders --they simply perform much better.
 
-Let's implement one. The encoder will consist in a stack of `Convolution2D` and `MaxPooling2D` layers (max pooling being used for spatial down-sampling), while the decoder will consist in a stack of `Convolution2D` and `UpSampling2D` layers.
+Let's implement one. The encoder will consist in a stack of `Conv2D` and `MaxPooling2D` layers (max pooling being used for spatial down-sampling), while the decoder will consist in a stack of `Conv2D` and `UpSampling2D` layers.
 
 ```python
-from keras.layers import Input, Dense, Convolution2D, MaxPooling2D, UpSampling2D
+from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D
 from keras.models import Model
+from keras import backend as K
 
-input_img = Input(shape=(1, 28, 28))
+input_img = Input(shape=(28, 28, 1))  # adapt this if using `channels_first` image data format
 
-x = Convolution2D(16, 3, 3, activation='relu', border_mode='same')(input_img)
-x = MaxPooling2D((2, 2), border_mode='same')(x)
-x = Convolution2D(8, 3, 3, activation='relu', border_mode='same')(x)
-x = MaxPooling2D((2, 2), border_mode='same')(x)
-x = Convolution2D(8, 3, 3, activation='relu', border_mode='same')(x)
-encoded = MaxPooling2D((2, 2), border_mode='same')(x)
+x = Conv2D(16, (3, 3), activation='relu', padding='same')(input_img)
+x = MaxPooling2D((2, 2), padding='same')(x)
+x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
+x = MaxPooling2D((2, 2), padding='same')(x)
+x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
+encoded = MaxPooling2D((2, 2), padding='same')(x)
 
-# at this point the representation is (8, 4, 4) i.e. 128-dimensional
+# at this point the representation is (4, 4, 8) i.e. 128-dimensional
 
-x = Convolution2D(8, 3, 3, activation='relu', border_mode='same')(encoded)
+x = Conv2D(8, (3, 3), activation='relu', padding='same')(encoded)
 x = UpSampling2D((2, 2))(x)
-x = Convolution2D(8, 3, 3, activation='relu', border_mode='same')(x)
+x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
 x = UpSampling2D((2, 2))(x)
-x = Convolution2D(16, 3, 3, activation='relu')(x)
+x = Conv2D(16, (3, 3), activation='relu')(x)
 x = UpSampling2D((2, 2))(x)
-decoded = Convolution2D(1, 3, 3, activation='sigmoid', border_mode='same')(x)
+decoded = Conv2D(1, (3, 3), activation='sigmoid', padding='same')(x)
 
 autoencoder = Model(input_img, decoded)
 autoencoder.compile(optimizer='adadelta', loss='binary_crossentropy')
@@ -270,8 +273,8 @@ import numpy as np
 
 x_train = x_train.astype('float32') / 255.
 x_test = x_test.astype('float32') / 255.
-x_train = np.reshape(x_train, (len(x_train), 1, 28, 28))
-x_test = np.reshape(x_test, (len(x_test), 1, 28, 28))
+x_train = np.reshape(x_train, (len(x_train), 28, 28, 1))  # adapt this if using `channels_first` image data format
+x_test = np.reshape(x_test, (len(x_test), 28, 28, 1))  # adapt this if using `channels_first` image data format
 ```
 
 Let's train this model for 50 epochs. For the sake of demonstrating how to visualize the results of a model during training, we will be using [the TensorFlow backend]() and the TensorBoard callback.
@@ -288,7 +291,7 @@ Then let's train our model. In the `callbacks` list we pass an instance of the `
 from keras.callbacks import TensorBoard
 
 autoencoder.fit(x_train, x_train,
-                nb_epoch=50,
+                epochs=50,
                 batch_size=128,
                 shuffle=True,
                 validation_data=(x_test, x_test),
@@ -357,8 +360,8 @@ import numpy as np
 
 x_train = x_train.astype('float32') / 255.
 x_test = x_test.astype('float32') / 255.
-x_train = np.reshape(x_train, (len(x_train), 1, 28, 28))
-x_test = np.reshape(x_test, (len(x_test), 1, 28, 28))
+x_train = np.reshape(x_train, (len(x_train), 28, 28, 1))  # adapt this if using `channels_first` image data format
+x_test = np.reshape(x_test, (len(x_test), 28, 28, 1))  # adapt this if using `channels_first` image data format
 
 noise_factor = 0.5
 x_train_noisy = x_train + noise_factor * np.random.normal(loc=0.0, scale=1.0, size=x_train.shape) 
@@ -389,20 +392,20 @@ If you squint you can still recognize them, but barely. Can our autoencoder lear
 Compared to the previous convolutional autoencoder, in order to improve the quality of the reconstructed, we'll use a slightly different model with more filters per layer:
 
 ```python
-input_img = Input(shape=(1, 28, 28))
+input_img = Input(shape=(28, 28, 1))  # adapt this if using `channels_first` image data format
 
-x = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(input_img)
-x = MaxPooling2D((2, 2), border_mode='same')(x)
-x = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(x)
-encoded = MaxPooling2D((2, 2), border_mode='same')(x)
+x = Conv2D(32, (3, 3), activation='relu', padding='same')(input_img)
+x = MaxPooling2D((2, 2), padding='same')(x)
+x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
+encoded = MaxPooling2D((2, 2), padding='same')(x)
 
-# at this point the representation is (32, 7, 7)
+# at this point the representation is (7, 7, 32)
 
-x = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(encoded)
+x = Conv2D(32, (3, 3), activation='relu', padding='same')(encoded)
 x = UpSampling2D((2, 2))(x)
-x = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(x)
+x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
 x = UpSampling2D((2, 2))(x)
-decoded = Convolution2D(1, 3, 3, activation='sigmoid', border_mode='same')(x)
+decoded = Conv2D(1, (3, 3), activation='sigmoid', padding='same')(x)
 
 autoencoder = Model(input_img, decoded)
 autoencoder.compile(optimizer='adadelta', loss='binary_crossentropy')
@@ -412,7 +415,7 @@ Let's train it for 100 epochs:
 
 ```python
 autoencoder.fit(x_train_noisy, x_train,
-                nb_epoch=100,
+                epochs=100,
                 batch_size=128,
                 shuffle=True,
                 validation_data=(x_test_noisy, x_test),
@@ -539,7 +542,7 @@ x_test = x_test.reshape((len(x_test), np.prod(x_test.shape[1:])))
 
 vae.fit(x_train, x_train,
         shuffle=True,
-        nb_epoch=nb_epoch,
+        epochs=epochs,
         batch_size=batch_size,
         validation_data=(x_test, x_test))
 ```
@@ -584,7 +587,7 @@ plt.show()
 
 ![vae classes plane](/img/ae/vae_digits_manifold.png)
 
-That's it folks! If you have suggestions for more topics to be covered in this post (or in future posts), you can contact me on Twitter at [@fchollet](https://twitter.com/fchollet).
+That's it! If you have suggestions for more topics to be covered in this post (or in future posts), you can contact me on Twitter at [@fchollet](https://twitter.com/fchollet).
 
 ----
 

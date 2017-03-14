@@ -5,101 +5,43 @@ Author: Francois Chollet
 
 ## An exploration of convnet filters with Keras
 
+**Note: all code examples have been updated to the Keras 2.0 API on March 14, 2017. You will need Keras version 2.0.0 or higher to run them.**
+
 In this post, we take a look at what deep convolutional neural networks (convnets) really learn, and how they understand the images we feed them. We will use Keras to visualize inputs that maximize the activation of the filters in different layers of the VGG16 architecture, trained on ImageNet. All of the code used in this post can be found [on Github](https://github.com/fchollet/keras/blob/master/examples/conv_filter_visualization.py).
 
 ![Some convnet filters](/img/conv5_2_stitched_filters_8x3.png)
 
 VGG16 (also called OxfordNet) is a convolutional neural network architecture named after the [Visual Geometry Group](http://www.robots.ox.ac.uk/~vgg/) from Oxford, who developed it. It was used to [win the ILSVR (ImageNet) competition in 2014](http://www.robots.ox.ac.uk/~vgg/research/very_deep/). To this day is it still considered to be an excellent vision model, although it has been somewhat outperformed by more revent advances such as Inception and ResNet.
 
-Lorenzo Baraldi ported the pre-trained Caffe version of VGG16 (as well as VGG19) to a Keras weights file, so we will just load that to do our experiments. You can download the weight file via [this link](https://gist.github.com/baraldilorenzo/07d7802847aaad0a35d3).
-
 First of all, let's start by defining the VGG16 model in Keras:
 
 ```python
-from keras.models import Sequential
-from keras.layers import Convolution2D, ZeroPadding2D, MaxPooling2D
-
-img_width, img_height = 128, 128
+from keras import applications
 
 # build the VGG16 network
-model = Sequential()
-model.add(ZeroPadding2D((1, 1), batch_input_shape=(1, 3, img_width, img_height)))
-first_layer = model.layers[-1]
-# this is a placeholder tensor that will contain our generated images
-input_img = first_layer.input
-
-# build the rest of the network
-model.add(Convolution2D(64, 3, 3, activation='relu', name='conv1_1'))
-model.add(ZeroPadding2D((1, 1)))
-model.add(Convolution2D(64, 3, 3, activation='relu', name='conv1_2'))
-model.add(MaxPooling2D((2, 2), strides=(2, 2)))
-
-model.add(ZeroPadding2D((1, 1)))
-model.add(Convolution2D(128, 3, 3, activation='relu', name='conv2_1'))
-model.add(ZeroPadding2D((1, 1)))
-model.add(Convolution2D(128, 3, 3, activation='relu', name='conv2_2'))
-model.add(MaxPooling2D((2, 2), strides=(2, 2)))
-
-model.add(ZeroPadding2D((1, 1)))
-model.add(Convolution2D(256, 3, 3, activation='relu', name='conv3_1'))
-model.add(ZeroPadding2D((1, 1)))
-model.add(Convolution2D(256, 3, 3, activation='relu', name='conv3_2'))
-model.add(ZeroPadding2D((1, 1)))
-model.add(Convolution2D(256, 3, 3, activation='relu', name='conv3_3'))
-model.add(MaxPooling2D((2, 2), strides=(2, 2)))
-
-model.add(ZeroPadding2D((1, 1)))
-model.add(Convolution2D(512, 3, 3, activation='relu', name='conv4_1'))
-model.add(ZeroPadding2D((1, 1)))
-model.add(Convolution2D(512, 3, 3, activation='relu', name='conv4_2'))
-model.add(ZeroPadding2D((1, 1)))
-model.add(Convolution2D(512, 3, 3, activation='relu', name='conv4_3'))
-model.add(MaxPooling2D((2, 2), strides=(2, 2)))
-
-model.add(ZeroPadding2D((1, 1)))
-model.add(Convolution2D(512, 3, 3, activation='relu', name='conv5_1'))
-model.add(ZeroPadding2D((1, 1)))
-model.add(Convolution2D(512, 3, 3, activation='relu', name='conv5_2'))
-model.add(ZeroPadding2D((1, 1)))
-model.add(Convolution2D(512, 3, 3, activation='relu', name='conv5_3'))
-model.add(MaxPooling2D((2, 2), strides=(2, 2)))
+model = applications.VGG16(include_top=False,
+                           weights='imagenet')
 
 # get the symbolic outputs of each "key" layer (we gave them unique names).
 layer_dict = dict([(layer.name, layer) for layer in model.layers])
 ```
 
-Note that we only go up to the last convolutional layer --we don't include fully-connected layers. The reason is that adding the fully connected layers forces you to use a fixed input size for the model (224x224, the original ImageNet format). By only keeping the convolutional modules, our model can be adapted to arbitrary input sizes (defined by `img_width` and `img_height`).
+Note that we only go up to the last convolutional layer --we don't include fully-connected layers. The reason is that adding the fully connected layers forces you to use a fixed input size for the model (224x224, the original ImageNet format). By only keeping the convolutional modules, our model can be adapted to arbitrary input sizes.
 
-Next, we load the pre-trained weights. In general, loading weights into a Keras model is simply done via `model.load_weights(weights_path)`, but in our case we don't need the last layers, so we need to parse the file manually.
+The model loads a set of weights pre-trained on ImageNet.
 
-```python
-import h5py
-
-weights_path = 'vgg16_weights.h5'
-
-f = h5py.File(weights_path)
-for k in range(f.attrs['nb_layers']):
-    if k >= len(model.layers):
-        # we don't look at the last (fully-connected) layers in the savefile
-        break
-    g = f['layer_{}'.format(k)]
-    weights = [g['param_{}'.format(p)] for p in range(g.attrs['nb_params'])]
-    model.layers[k].set_weights(weights)
-f.close()
-print('Model loaded.')
-```
-Now let's define a loss function that will seek to maximize the activation of a specific filter (`filter_index`) in a specific layer (`layer_name`). We do this via a Keras backend function, which allows our code to run both on top of TensorFlow and Theano. This is useful because TensorFlow has much faster convolutions on CPU, while Theano has somewhat faster convolutions on GPU at the moment: this allows us to pick the right backend based on our environment, without any changes in our code.
+Now let's define a loss function that will seek to maximize the activation of a specific filter (`filter_index`) in a specific layer (`layer_name`). We do this via a Keras backend function, which allows our code to run both on top of TensorFlow and Theano.
 
 ```python
 from keras import backend as K
 
-layer_name = 'conv5_1'
+layer_name = 'block5_conv3'
 filter_index = 0  # can be any integer from 0 to 511, as there are 512 filters in that layer
 
 # build a loss function that maximizes the activation
 # of the nth filter of the layer considered
 layer_output = layer_dict[layer_name].output
-loss = K.mean(layer_output[:, filter_index, :, :])
+loss = K.mean(layer_output[:, :, :, filter_index])
 
 # compute the gradient of the input picture wrt this loss
 grads = K.gradients(loss, input_img)[0]
@@ -170,9 +112,9 @@ You can think of the filters in each layer as a basis of vectors, typically over
 
 A remarkable observation: a lot of these filters are identical, but rotated by some non-random factor (typically 90 degrees). This means that we could potentially compress the number of filters used in a convnet by a large factor by finding a way to make the convolution filters rotation-invariant. I can see a few ways this could be achieved --it's an interesting research direction.
 
-Shockingly, the rotation observation holds true even for relatively high-level filters, such as those in `conv4_1`.
+Shockingly, the rotation observation holds true even for relatively high-level filters, such as those in `block4_conv1`.
 
-In the highest layers (`conv5_2`, `conv5_3`) we start to recognize textures similar to that found in the objects that network was trained to classify, such as feathers, eyes, etc.
+In the highest layers (`block5_conv2`, `block5_conv3`) we start to recognize textures similar to that found in the objects that network was trained to classify, such as feathers, eyes, etc.
 
 ## Convnet dreams
 
@@ -184,11 +126,12 @@ Another fun thing to do is to apply these filters to photos (rather than to nois
 
 Now for something else --what if you included the fully connected layers at the end of the network, and tried to maximize the activation of a specific output of the network? Would you get an image that looked anything like the class encoded by that output? Let's try it.
 
-We can just use the [original VGG16 specification](https://gist.github.com/baraldilorenzo/07d7802847aaad0a35d3), and define this very simple loss function:
+We can just define this very simple loss function:
 
 ```python
-layer_output = model.layers[-1].get_output()
-loss = K.mean(layer_output[:, output_index])
+model = applications.VGG16(include_top=True,
+                           weights='imagenet')
+loss = K.mean(model.output[:, output_index])
 ```
 Let's apply it to `output_index = 65` (which is the sea snake class in ImageNet). We quickly reach a loss of 0.999, which means that the convnet is 99.9% confident that the generated input is a sea snake. Let's take a look at the generated input.
 

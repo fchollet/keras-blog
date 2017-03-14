@@ -19,6 +19,8 @@ This will lead us to cover the following Keras features:
 - ...and more.
 
 
+**Note: all code examples have been updated to the Keras 2.0 API on March 14, 2017. You will need Keras version 2.0.0 or higher to run them.**
+
 ----
 
 ## Our setup: only 2000 training examples (1000 per class)
@@ -160,19 +162,19 @@ The full code for this experiment can be found [here](https://gist.github.com/fc
 
 ```python
 from keras.models import Sequential
-from keras.layers import Convolution2D, MaxPooling2D
+from keras.layers import Conv2D, MaxPooling2D
 from keras.layers import Activation, Dropout, Flatten, Dense
 
 model = Sequential()
-model.add(Convolution2D(32, 3, 3, input_shape=(3, 150, 150)))
+model.add(Conv2D(32, (3, 3), input_shape=(3, 150, 150)))
 model.add(Activation('relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 
-model.add(Convolution2D(32, 3, 3))
+model.add(Conv2D(32, (3, 3)))
 model.add(Activation('relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 
-model.add(Convolution2D(64, 3, 3))
+model.add(Conv2D(64, (3, 3)))
 model.add(Activation('relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 
@@ -197,6 +199,8 @@ model.compile(loss='binary_crossentropy',
 Let's prepare our data. We will use `.flow_from_directory()` to generate batches of image data (and their labels) directly from our jpgs in their respective folders.
 
 ```python
+batch_size = 16
+
 # this is the augmentation configuration we will use for training
 train_datagen = ImageDataGenerator(
         rescale=1./255,
@@ -214,14 +218,14 @@ test_datagen = ImageDataGenerator(rescale=1./255)
 train_generator = train_datagen.flow_from_directory(
         'data/train',  # this is the target directory
         target_size=(150, 150),  # all images will be resized to 150x150
-        batch_size=32,
+        batch_size=batch_size,
         class_mode='binary')  # since we use binary_crossentropy loss, we need binary labels
 
 # this is a similar generator, for validation data
 validation_generator = test_datagen.flow_from_directory(
         'data/validation',
         target_size=(150, 150),
-        batch_size=32,
+        batch_size=batch_size,
         class_mode='binary')
 ```
 
@@ -231,10 +235,10 @@ Each epoch takes 20-30s on GPU and 300-400s on CPU. So it's definitely viable to
 ```python
 model.fit_generator(
         train_generator,
-        samples_per_epoch=2000,
-        nb_epoch=50,
+        steps_per_epoch=2000 // batch_size,
+        epochs=50,
         validation_data=validation_generator,
-        nb_val_samples=800)
+        validation_steps=800 // batch_size)
 model.save_weights('first_try.h5')  # always save your weights after training or during training
 ```
 
@@ -263,10 +267,12 @@ The reason why we are storing the features offline rather than adding our fully-
 You can find the full code for this experiment [here](https://gist.github.com/fchollet/f35fbc80e066a49d65f1688a7e99f069). You can get the weights file [from Github](https://gist.github.com/baraldilorenzo/07d7802847aaad0a35d3). We won't review how the model is built and loaded --this is covered in multiple Keras examples already. But let's take a look at how we record the bottleneck features using image data generators:
 
 ```python
+batch_size = 16
+
 generator = datagen.flow_from_directory(
         'data/train',
         target_size=(150, 150),
-        batch_size=32,
+        batch_size=batch_size,
         class_mode=None,  # this means our generator will only yield batches of data, no labels
         shuffle=False)  # our data will be in order, so all first 1000 images will be cats, then 1000 dogs
 # the predict_generator method returns the output of a model, given
@@ -278,7 +284,7 @@ np.save(open('bottleneck_features_train.npy', 'w'), bottleneck_features_train)
 generator = datagen.flow_from_directory(
         'data/validation',
         target_size=(150, 150),
-        batch_size=32,
+        batch_size=batch_size,
         class_mode=None,
         shuffle=False)
 bottleneck_features_validation = model.predict_generator(generator, 800)
@@ -306,7 +312,8 @@ model.compile(optimizer='rmsprop',
               metrics=['accuracy'])
 
 model.fit(train_data, train_labels,
-          nb_epoch=50, batch_size=32,
+          epochs=50,
+          batch_size=batch_size,
           validation_data=(validation_data, validation_labels))
 model.save_weights('bottleneck_fc_model.h5')
 ```
@@ -390,6 +397,8 @@ model.compile(loss='binary_crossentropy',
 Finally, we start training the whole thing, with a very slow learning rate:
 
 ```python
+batch_size = 16
+
 # prepare data augmentation configuration
 train_datagen = ImageDataGenerator(
         rescale=1./255,
@@ -402,22 +411,22 @@ test_datagen = ImageDataGenerator(rescale=1./255)
 train_generator = train_datagen.flow_from_directory(
         train_data_dir,
         target_size=(img_height, img_width),
-        batch_size=32,
+        batch_size=batch_size,
         class_mode='binary')
 
 validation_generator = test_datagen.flow_from_directory(
         validation_data_dir,
         target_size=(img_height, img_width),
-        batch_size=32,
+        batch_size=batch_size,
         class_mode='binary')
 
 # fine-tune the model
 model.fit_generator(
         train_generator,
-        samples_per_epoch=nb_train_samples,
-        nb_epoch=nb_epoch,
+        steps_per_epoch=nb_train_samples // batch_size,
+        epochs=epochs,
         validation_data=validation_generator,
-        nb_val_samples=nb_validation_samples)
+        validation_steps=nb_validation_samples // batch_size)
 ```
 
 This approach gets us to a validation accuracy of 0.94 after 50 epochs. Great success!
