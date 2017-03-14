@@ -27,7 +27,7 @@ This will lead us to cover the following Keras features:
 
 We will start from the following setup:
 
-- a machine with Keras, SciPy, PIL installed. If you have a NVIDIA GPU that you can use (and cuDNN installed), that's great, but since we are working with few images that isn't strictly necessary. *Note that since this tutorial makes use of Keras features in introduced in version 1.0.4, __you should update Keras before starting__.*
+- a machine with Keras, SciPy, PIL installed. If you have a NVIDIA GPU that you can use (and cuDNN installed), that's great, but since we are working with few images that isn't strictly necessary.
 - a training data directory and validation data directory containing one subdirectory per image class, filled with .png or .jpg images:
 ```
 data/
