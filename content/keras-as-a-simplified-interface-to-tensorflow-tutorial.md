@@ -236,19 +236,21 @@ Let's say that you are starting from the following Keras model, and that you wan
 ```python
 # this is our initial Keras model
 model = Sequential()
-first_layer = Dense(32, activation='relu', input_dim=784)
+model.add(Dense(32, activation='relu', input_dim=784))
 model.add(Dense(10, activation='softmax'))
 ```
-You just need to use `set_input` to modify the input of the first layer right after you instantiate it, then build the rest of the model on top:
+You just need to use `keras.layers.InputLayer` to start building your Sequential model on top of a custom TensorFlow placeholder, then build the rest of the model on top:
 
 ```python
+from keras.layers import InputLayer
+
 # this is our modified Keras model
 model = Sequential()
-first_layer = Dense(32, activation='relu', input_dim=784)
-first_layer.set_input(my_input_tensor)
+model.add(InputLayer(input_tensor=custom_input_tensor,
+                     input_shape=(None, 784)))
 
 # build the rest of the model as before
-model.add(first_layer)
+model.add(Dense(32, activation='relu'))
 model.add(Dense(10, activation='softmax'))
 ```
 
