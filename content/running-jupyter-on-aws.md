@@ -16,7 +16,7 @@ A lot of deep learning applications are very computationally intensive, and woul
 
 ## Why would I *not* want to use Jupyter on AWS for deep learning?
 
-AWS GPU instances can quickly become expensive. The one we suggest using costs $0.42 per hour. This is fine for occasional use, but if you are going to run experiments for several hours per day every day, then you are better off building your own deep learning machine, featuring a Titan X or GTX 1080 Ti.
+AWS GPU instances can quickly become expensive. The one we suggest using costs $0.90 per hour. This is fine for occasional use, but if you are going to run experiments for several hours per day every day, then you are better off building your own deep learning machine, featuring a Titan X or GTX 1080 Ti.
 
 
 ## Before you start
@@ -26,6 +26,7 @@ Note:
 - You will need an active AWS account.
 - Some familiarity with AWS EC2 will help, but isn't mandatory.
 
+It will get 5 to 10 minutes to get set up.
 
 ----
 
@@ -50,7 +51,7 @@ Scroll down until you find the AMI named "Deep Learning AMI Ubuntu Version" (pic
 
 ## 3 - Select the `p2.xlarge` instance.
 
-This instance type provides access to a single GPU and costs $0.425 per hour of usage (as of March 2017). Click "configure instance details".
+This instance type provides access to a single GPU and costs $0.90 per hour of usage (as of March 2017). Click "configure instance details".
 
 ![The p2.xlarge instance](/img/jupyter-aws/p2.png)
 
@@ -59,12 +60,9 @@ This instance type provides access to a single GPU and costs $0.425 per hour of 
 
 You can keep the default configuration for the steps "Configure Instance", "Add Storage", "Add Tags". But we will customize the step "Configure Security Group".
 
-Create two new rules:
+Create **a custom TCP rule to allow port 8888**.
 
-- a HTTPS rule to allow port 443.
-- a custom TCP rule to allow port 8888.
-
-These rules can either be allowed for your current public IP (e.g. that of your laptop), or for any IP (e.g. `0.0.0.0/0`) if the former is not possible. Note that if you do allow port `8888` for any IP, then literally anyone will be able to listen to that port on your instance (which is where we will be running our IPython notebooks). We will add password protection to the notebooks to migitate the risk of random strangers modifying them, but that may be pretty weak protection. If at all possible, you should really consider restricting the access to a specific IP. However, if your IP address changes constantly, then that is not a very pratical choice. If you are going to leave access open to any IP, then remember not to leave any sensitive data on the instance.
+This rule can either be allowed for your current public IP (e.g. that of your laptop), or for any IP (e.g. `0.0.0.0/0`) if the former is not possible. Note that if you do allow port `8888` for any IP, then literally anyone will be able to listen to that port on your instance (which is where we will be running our IPython notebooks). We will add password protection to the notebooks to migitate the risk of random strangers modifying them, but that may be pretty weak protection. If at all possible, you should really consider restricting the access to a specific IP. However, if your IP address changes constantly, then that is not a very pratical choice. If you are going to leave access open to any IP, then remember not to leave any sensitive data on the instance.
 
 ![Configure a new security group](/img/jupyter-aws/security-group.png)
 
@@ -76,6 +74,8 @@ At the end of the launch process, you will be asked if you want to create new co
 To connect to your instance, select it on the EC2 control panel, click the "connect" button, and follow the instructions provided, e.g.:
 
 ![Connect instructions](/img/jupyter-aws/connection-instructions.png)
+
+Note that it may take a just minutes until the instance is fully booted up. If you can't connect at first, wait a bit and retry.
 
 
 ## 6 - Set up SSL certificates
@@ -148,7 +148,22 @@ sudo pip install keras --upgrade --no-deps
 The AMI you are using is regularly updated by Amazon, but it may not be using the latest version of every package.
 
 
-## 8 - Start using Jupyter from your local browser
+## 8 - Set up local port forwarding
+
+In a shell **on your local machine** (**not** the remote instance), start fowarding your local port 443 (the HTTPS port) to port 8888 of the remote instance. This is done using the syntax:
+
+```
+sudo ssh -i awsKeys.pem -L local_port:local_machine:remote_port remote_machine
+```
+
+In our case this becomes:
+
+```
+sudo ssh -i awsKeys.pem -L 443:127.0.0.1:8888 ubuntu@ec2-54-147-126-214.compute-1.amazonaws.com
+```
+
+
+## 9 - Start using Jupyter from your local browser
 
 First, on the remote instance, create the folder where you will save your notebooks:
 
@@ -157,19 +172,19 @@ mkdir notebooks
 cd notebooks
 ```
 
-Start Jupyter Notebook:
+Start Jupyter Notebook by running this command inside the folder you create, on the remote instance:
 
 ```
 ipython notebook
 ```
 
-Then, in your local browser, navigate to the public DNS address of your instance (specifically, to port 8888, where the notebook is served). You can find it in the connection information tab you get by clicking "connect" in the EC2 console (it looks like `ec2-54-147-126-214.compute-1.amazonaws.com`). Make sure that you use HTTPS in the address, e.g. `https://ec2-54-147-126-214.compute-1.amazonaws.com:8888/`
+Then, in your local browser, navigate to the local address which we are fowarding to the remote notebook process, `https://127.0.0.1`. Make sure that you use HTTPS in the address, otherwise you will get an SSL error.
 
 You should see a safety warning:
 
 ![Safety warning](/img/jupyter-aws/safety-warning.png)
 
-This warning is simply due to the fact that the SSL certificate we generated isn't verified by any trusted authority (obviously: it's just ours). Click "advanced" and proceed to navigate, which is safe.
+This warning is simply due to the fact that the SSL certificate we generated isn't verified by any trusted authority (obviously: we just generated our own). Click "advanced" and proceed to navigate, which is safe.
 
 You should then be prompted to enter your Jupyter password. You will then arrive to the Jupyter dashboard.
 
