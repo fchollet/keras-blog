@@ -69,6 +69,12 @@ from tensorflow.examples.tutorials.mnist import input_data
 mnist_data = input_data.read_data_sets('MNIST_data', one_hot=True)
 
 train_step = tf.train.GradientDescentOptimizer(0.5).minimize(loss)
+
+# Initialize all variables
+init_op = tf.global_variables_initializer()
+sess.run(init_op)
+
+# Run training loop
 with sess.as_default():
     for i in range(100):
         batch = mnist_data.train.next_batch(50)
