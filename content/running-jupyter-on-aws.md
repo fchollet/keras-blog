@@ -98,7 +98,7 @@ When done, you will have created two files in the current `ssl` directory: `cert
 
 ## 6 - Configure Jupyter
 
-Before we start using Jupyter, we need to touch-up its default configuration. First, we will need to generate a new Jupyter config file:
+Before we start using Jupyter, we need to touch-up its default configuration. First, we will need to generate a new Jupyter config file (still on the remote instance):
 
 ```
 jupyter notebook --generate-config
@@ -139,7 +139,7 @@ In case you are not a Vi person, remember that you need to press `i` to start in
 
 ## 7 - Update Keras
 
-You are almost ready to start using Jupyter. But first, make sure Keras is up to date by running:
+You are almost ready to start using Jupyter. But first, make sure Keras is up to date by running (still on the remote instance):
 
 ```
 sudo pip install keras --upgrade --no-deps
@@ -150,7 +150,7 @@ The AMI you are using is regularly updated by Amazon, but it may not be using th
 
 ## 8 - Start using Jupyter from your local browser
 
-First, create the folder where you will save your notebooks:
+First, on the remote instance, create the folder where you will save your notebooks:
 
 ```
 mkdir notebooks
