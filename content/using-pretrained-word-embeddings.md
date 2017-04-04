@@ -83,8 +83,15 @@ for name in sorted(os.listdir(TEXT_DATA_DIR)):
         for fname in sorted(os.listdir(path)):
             if fname.isdigit():
                 fpath = os.path.join(path, fname)
-                f = open(fpath)
-                texts.append(f.read())
+                if sys.version_info < (3,):
+                    f = open(fpath)
+                else:
+                    f = open(fpath, encoding='latin-1')
+                t = f.read()
+                i = t.find('\n\n')  # skip header
+                if 0 < i:
+                    t = t[i:]
+                texts.append(t)
                 f.close()
                 labels.append(label_id)
 
