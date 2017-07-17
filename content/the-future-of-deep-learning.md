@@ -1,6 +1,7 @@
 Title: The future of deep learning
 Date: 2017-07-18
 Category: Essays
+Status: Draft
 Author: Francois Chollet
 
 This post is adapted from Section 3 of Chapter 9 of my book, [Deep Learning with Python](https://www.manning.com/books/deep-learning-with-python?a_aid=keras&a_bid=76564dff) (Manning Publications). 
