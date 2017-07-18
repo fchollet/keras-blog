@@ -5,7 +5,6 @@ Author: Francois Chollet
 
 This post is adapted from Section 2 of Chapter 9 of my book, [Deep Learning with Python](https://www.manning.com/books/deep-learning-with-python?a_aid=keras&a_bid=76564dff) (Manning Publications). 
 It is part of a series of two posts on the current limitations of deep learning, and its future. 
-The second part will be posted on July 18, 2017.
 
 This post is targeted at people who already have significant experience with deep learning 
 (e.g. people who have read chapters 1 through 8 of the book). 
@@ -96,7 +95,7 @@ the input-to-output mapping that they operate and our own human perception.
 In short, deep learning models do not have any understanding of their input, at least not in any human sense. Our own understanding of 
 images, sounds, and language, is grounded in our sensorimotor experience as humans—as embodied earthly creatures. 
 Machine learning models have no access to such experiences and thus cannot "understand" their inputs in any human-relatable way. 
-By annotating large numbers training examples to feed into our models, 
+By annotating large numbers of training examples to feed into our models, 
 we get them to learn a geometric transform that maps data to human concepts on this specific set of examples, but this 
 mapping is just a simplistic sketch of the original model in our minds, the one developed from our experience as embodied agents—it is 
 like a dim image in a mirror.
@@ -118,7 +117,7 @@ models do, and the way that humans think and learn. It isn't just the fact that 
 of being presented with explicit training examples. Aside from the different learning processes, there is a fundamental difference in the 
 nature of the underlying representations.
 
-Humans are capable of far more than mapping immediate stimuli to immediate responses, like a deep net, or an maybe insect, would do. They 
+Humans are capable of far more than mapping immediate stimuli to immediate responses, like a deep net, or maybe an insect, would do. They 
 maintain complex, *abstract models* of their current situation, of themselves, of other people, and can use these models to anticipate 
 different possible futures and perform long-term planning. They are capable of merging together known concepts to represent something they 
 have never experienced before—like picturing a horse wearing jeans, for instance, or imagining what they would do if they won the 
@@ -160,6 +159,6 @@ programs that belong to a very narrow and specific subset of all possible progra
 But what if we could learn *any* program, in a modular and 
 reusable way? Let's see in the next post what the road ahead may look like.
 
-The second part will be posted on July 18, 2017.
+You can read the second part here: [The future of deep learning](https://blog.keras.io/the-future-of-deep-learning.html).
 
 *[@fchollet](https://twitter.com/fchollet), May 2017*
