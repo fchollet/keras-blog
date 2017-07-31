@@ -200,17 +200,17 @@
 <span class="n">input_img</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">784</span><span class="p">,))</span>
 <span class="c"># add a Dense layer with a L1 activity regularizer</span>
 <span class="n">encoded</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="n">encoding_dim</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;relu&#39;</span><span class="p">,</span>
-                <span class="n">activity_regularizer</span><span class="o">=</span><span class="n">regularizers</span><span class="o">.</span><span class="n">activity_l1</span><span class="p">(</span><span class="mf">10e-5</span><span class="p">))(</span><span class="n">input_img</span><span class="p">)</span>
+                <span class="n">activity_regularizer</span><span class="o">=</span><span class="n">regularizers</span><span class="o">.</span><span class="n">activity_l1</span><span class="p">(</span><span class="mf">10e-8</span><span class="p">))(</span><span class="n">input_img</span><span class="p">)</span>
 <span class="n">decoded</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">784</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s">&#39;sigmoid&#39;</span><span class="p">)(</span><span class="n">encoded</span><span class="p">)</span>
 
 <span class="n">autoencoder</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="n">input_img</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">decoded</span><span class="p">)</span>
 </pre></div>
 
 
-<p>Let's train this model for 100 epochs (with the added regularization the model is less likely to overfit and can be trained longer). The models ends with a train loss of <code>0.11</code> and test loss of <code>0.10</code>. The difference between the two is mostly due to the regularization term being added to the loss during training (worth about 0.01).</p>
+<p>Let's train this model for 100 epochs (with the added regularization the model is less likely to overfit and can be trained longer). The models ends with a train/test loss of <code>0.11</code>.</p>
 <p>Here's a visualization of our new results:</p>
 <p><img alt="sparse autoencoder" src="/img/ae/sparse_ae_32.png" /></p>
-<p>They look pretty similar to the previous model, the only significant difference being the sparsity of the encoded representations. <code>encoded_imgs.mean()</code> yields a value <code>3.33</code> (over our 10,000 test images), whereas with the previous model the same quantity was <code>7.30</code>. So our new model yields encoded representations that are twice sparser.</p>
+<p>They look pretty similar to the previous model, the only significant difference being the sparsity of the encoded representations. <code>encoded_imgs.mean()</code> yields a value <code>5.31</code> (over our 10,000 test images), whereas with the previous model the same quantity was <code>7.30</code>. So our new model yields encoded representations that are twice sparser.</p>
 <hr />
 <h2>Deep autoencoder</h2>
 <p>We do not have to limit ourselves to a single layer as encoder or decoder, we could instead use a stack of layers, such as:</p>
