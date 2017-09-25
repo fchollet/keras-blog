@@ -26,7 +26,7 @@ Note:
 - You will need an active AWS account.
 - Some familiarity with AWS EC2 will help, but isn't mandatory.
 
-It will get 5 to 10 minutes to get set up.
+It will take 5 to 10 minutes to get set up.
 
 ----
 
@@ -175,7 +175,7 @@ cd notebooks
 Start Jupyter Notebook by running this command inside the folder you create, on the remote instance:
 
 ```
-ipython notebook
+jupyter notebook
 ```
 
 Then, in your local browser, navigate to the local address which we are fowarding to the remote notebook process, `https://127.0.0.1`. Make sure that you use HTTPS in the address, otherwise you will get an SSL error.
