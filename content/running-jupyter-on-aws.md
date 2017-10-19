@@ -139,23 +139,31 @@ In case you are not a Vi person, remember that you need to press `i` to start in
 
 ## 7 - Update Keras
 
-You are almost ready to start using Jupyter. But first, make sure to install Keras. As of September 2017, Amazon does not include Keras in their Deep Learning AMI. Instead, they include an unusable Amazon fork of Keras that you should be discarding in order to be able to use Keras normally. On the remote instance, run:
+You are almost ready to start using Jupyter. But first, make sure to update Keras. Albeit there is a version of Keras pre-installed on the AMI, it may not necessarily be up to date. On the remote instance, run:
 
-```
+.Install Keras
+[source,cs]
+--------------------------------------------------------
 sudo pip install keras --upgrade
-```
+--------------------------------------------------------
 
-If you are going to use Python 3, you should also update Keras using `pip3`:
+In case you plan on using Python 3, you should also update Keras using `pip3`:
 
-```
+.Updating Keras for Python 3
+[source,cs]
+--------------------------------------------------------
 sudo pip3 install keras --upgrade
-```
+--------------------------------------------------------
 
-Importantly, you should also delete the existing Keras config file (left by the Amazon fork), which would cause bugs and prevent you from using Keras normally:
+In case there is any existing Keras configuration file on the instance (this should not be the case, but the AMI may have changed since we wrote this guide), you should delete it, just in case. Keras will recreate a standard configuration file when it is launched for the first time.
 
-```
+If the code snippet below returns an error saying that the file does not exist, then you can just ignore it.
+
+.Cleaning up the Keras config file
+[source,cs]
+--------------------------------------------------------
 rm ~/.keras/keras.json
-```
+--------------------------------------------------------
 
 
 ## 8 - Set up local port forwarding
