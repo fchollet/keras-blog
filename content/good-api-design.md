@@ -4,7 +4,7 @@ Category: Essays
 Author: Francois Chollet
 
 
-Writing code is rarely just a private affair between you and your computer. Code is not just meant for machines; it has human users. It is meant to be read by people, used by other developers, maintained and built upon. Developers who produce better code, in greater quantity, when they are kept happy and productive, working with tools they love. Developers who unfortunately are often being let down by their tools, and left cursing at obscure error messages, wondering why that stupid library doesn't do what they thought it would. Our tools have great potential to cause us pain, especially in a field as complex as software engineering.
+Writing code is rarely just a private affair between you and your computer. Code is not just meant for machines; it has human users. It is meant to be read by people, used by other developers, maintained and built upon. Developers produce better code, in greater quantity, when they are kept happy and productive, working with tools they love. Developers who unfortunately are often being let down by their tools, and left cursing at obscure error messages, wondering why that stupid library doesn't do what they thought it would. Our tools have great potential to cause us pain, especially in a field as complex as software engineering.
 
 User experience (UX) should be central in application programming interface (API) design. A well-designed API, making complicated tasks feel easy, will probably prevent a lot more pain in this world than a brilliant new design for a bedside lamp ever would. So why does API UX design so often feel like an afterthought, compared to even furniture design? Why is there a profound lack of design culture among developers?
 
