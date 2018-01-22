@@ -4,6 +4,9 @@ Category: Essays
 Author: Francois Chollet
 
 This post is adapted from Section 2 of Chapter 9 of my book, [Deep Learning with Python](https://www.manning.com/books/deep-learning-with-python?a_aid=keras&a_bid=76564dff) (Manning Publications). 
+
+[![Deep learning with Python](/img/deep_learning_with_python_cover_thumbnail.png)](https://www.manning.com/books/deep-learning-with-python?a_aid=keras&a_bid=76564dff)
+
 It is part of a series of two posts on the current limitations of deep learning, and its future. 
 
 This post is targeted at people who already have significant experience with deep learning 
