@@ -3,7 +3,7 @@ Date: 2018-01-29
 Category: Tutorials
 Author: Adrian Rosebrock
 
-_This is a guest post by Adrian Rosebrock. Adrian is the author of [PyImageSearch.com](https://www.pyimagesearch.com/), a blog about computer vision and deep learning. Adrian recently finished authoring_ [Deep Learning for Computer Vision with Python](https://www.pyimagesearch.com/deep-learning-computer-vision-python-book/)_, a new book on deep learning for computer vision and image recognition_.
+_This is a guest post by Adrian Rosebrock. Adrian is the author of [PyImageSearch.com](https://www.pyimagesearch.com/), a blog about computer vision and deep learning. Adrian recently finished authoring_ [Deep Learning for Computer Vision with Python](https://www.pyimagesearch.com/deep-learning-computer-vision-python-book/)_, a new book on deep learning for computer vision and image recognition using Keras._
 
 In this tutorial, we will present a simple method to take a Keras model and deploy it as a REST API.
 
@@ -48,7 +48,7 @@ Inside `run_keras_server.py` you'll find three functions, namely:
 - `prepare_image`: This function preprocesses an input image prior to passing it through our network for prediction. If you are not working with image data you may want to consider changing the name to a more generic `prepare_datapoint` and applying any scaling/normalization you may need.
 - `predict`: The actual endpoint of our API that will classify the incoming data from the request and return the results to the client.
 
-The full code to this tutorial can be found [here](#).
+The full code to this tutorial can be found [here](https://github.com/jrosebr1/simple-keras-rest-api).
 
 ```python
 # import the necessary packages
@@ -219,7 +219,7 @@ You may be tempted to load your model _inside_ your `predict` function, like so:
 ...
 ```
 
-This code implies that the `model` will be loaded _each and every time_ a new request comes in. This is incredibly inefficient and can even cause your system run out of memory.
+This code implies that the `model` will be loaded _each and every time_ a new request comes in. This is incredibly inefficient and can even cause your system to run out of memory.
 
 If you try to run the code above you'll notice that your API will run considerably slower (especially if your model is large) &mdash; this is due to the _significant_ overhead in both I/O and CPU operations used to load your model for _each new request_.
 
@@ -355,7 +355,7 @@ Given the `payload` we can POST the data to our endpoint using a call to `reques
 
 Once we have the output of the request, `r`, we can check if the classification is a success (or not) and then loop over `r["predictions"]`.
 
-To run this script, first ensure `run_keras_server.py` has been executed and the Flask web server is currently running &mdash; from there, execute the following command in a separate shell:
+To run execute `simple_request.py`, first ensure `run_keras_server.py` (i.e., the Flask web server) is currently running. From there, execute the following command in a separate shell:
 
 ```sh
 $ python simple_request.py 
@@ -376,7 +376,7 @@ In this post you learned how to:
 - Utilize cURL to send data to the API
 - Use Python and the [requests](http://docs.python-requests.org/en/master/) package to send data to the endpoint and consume results
 
-The code covered in this tutorial can he found [here](#) and is meant to be used as a template for your own Keras REST API &mdash; feel free to modify it as you see fit.
+The code covered in this tutorial can he found [here](https://github.com/jrosebr1/simple-keras-rest-api) and is meant to be used as a template for your own Keras REST API &mdash; feel free to modify it as you see fit.
 
 Please keep in mind that the code in this post is meant to be _instructional_. It is _not_ mean to be production-level and capable of scaling under heavy load and a large number of incoming requests.
 
