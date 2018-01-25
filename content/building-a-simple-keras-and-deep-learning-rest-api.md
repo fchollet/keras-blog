@@ -45,7 +45,7 @@ dependencies), a Python web framework, so we can build our API endpoint. We'll a
 The relevant `pip` install commands are listed below:
 
 ```sh
-$ pip install flask gevent requests
+$ pip install flask gevent requests pillow
 ```
 
 ---
@@ -264,6 +264,12 @@ model in RAM could easily exhaust the system memory.
 
 To this end, try to avoid loading a new model instance for every new incoming request unless you
 have a very specific, justifiable reason for doing so.
+
+**Caveat:** We are assuming you are using the default Flask server that is single threaded. If you
+deploy to a multi-threaded server you could be in a situation where you are *still* loading
+multiple models in memory even when using the "more correct" method discussed earlier in this post.
+If you intend on using a dedicated server such as Apache or nginx you should consider making
+your pipeline more scalable, [as discussed here](https://www.pyimagesearch.com/2018/01/29/scalable-keras-deep-learning-rest-api/).
 
 ---
 
