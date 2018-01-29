@@ -8,6 +8,8 @@ a blog about computer vision and deep learning. Adrian recently finished authori
 [Deep Learning for Computer Vision with Python](https://www.pyimagesearch.com/deep-learning-computer-vision-python-book/)_,
 a new book on deep learning for computer vision and image recognition using Keras._
 
+---
+
 In this tutorial, we will present a simple method to take a Keras model and deploy it as a REST API.
 
 The examples covered in this post will serve as a template/starting point for building your own deep
