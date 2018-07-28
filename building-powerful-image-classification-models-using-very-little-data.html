@@ -129,7 +129,7 @@ The current literature suggests machine classifiers can score above 80% accuracy
         <span class="n">width_shift_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
         <span class="n">height_shift_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
         <span class="n">rescale</span><span class="o">=</span><span class="mf">1.</span><span class="o">/</span><span class="mi">255</span><span class="p">,</span>
-        <span class="n">shear_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">shear_range</span><span class="o">=</span><span class="mf">20</span><span class="p">,</span>
         <span class="n">zoom_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
         <span class="n">horizontal_flip</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
         <span class="n">fill_mode</span><span class="o">=</span><span class="s">&#39;nearest&#39;</span><span class="p">)</span>
@@ -153,7 +153,7 @@ The current literature suggests machine classifiers can score above 80% accuracy
         <span class="n">rotation_range</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span>
         <span class="n">width_shift_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
         <span class="n">height_shift_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
-        <span class="n">shear_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">shear_range</span><span class="o">=</span><span class="mf">20</span><span class="p">,</span>
         <span class="n">zoom_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
         <span class="n">horizontal_flip</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
         <span class="n">fill_mode</span><span class="o">=</span><span class="s">&#39;nearest&#39;</span><span class="p">)</span>
@@ -222,7 +222,7 @@ The current literature suggests machine classifiers can score above 80% accuracy
 <div class="highlight"><pre><span class="c"># this is the augmentation configuration we will use for training</span>
 <span class="n">train_datagen</span> <span class="o">=</span> <span class="n">ImageDataGenerator</span><span class="p">(</span>
         <span class="n">rescale</span><span class="o">=</span><span class="mf">1.</span><span class="o">/</span><span class="mi">255</span><span class="p">,</span>
-        <span class="n">shear_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">shear_range</span><span class="o">=</span><span class="mf">20</span><span class="p">,</span>
         <span class="n">zoom_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
         <span class="n">horizontal_flip</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
@@ -390,7 +390,7 @@ Epoch 50/50
 <div class="highlight"><pre><span class="c"># prepare data augmentation configuration</span>
 <span class="n">train_datagen</span> <span class="o">=</span> <span class="n">ImageDataGenerator</span><span class="p">(</span>
         <span class="n">rescale</span><span class="o">=</span><span class="mf">1.</span><span class="o">/</span><span class="mi">255</span><span class="p">,</span>
-        <span class="n">shear_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">shear_range</span><span class="o">=</span><span class="mf">20</span><span class="p">,</span>
         <span class="n">zoom_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
         <span class="n">horizontal_flip</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
