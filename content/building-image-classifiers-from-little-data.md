@@ -95,7 +95,7 @@ datagen = ImageDataGenerator(
         width_shift_range=0.2,
         height_shift_range=0.2,
         rescale=1./255,
-        shear_range=0.2,
+        shear_range=20,
         zoom_range=0.2,
         horizontal_flip=True,
         fill_mode='nearest')
@@ -120,7 +120,7 @@ datagen = ImageDataGenerator(
         rotation_range=40,
         width_shift_range=0.2,
         height_shift_range=0.2,
-        shear_range=0.2,
+        shear_range=20,
         zoom_range=0.2,
         horizontal_flip=True,
         fill_mode='nearest')
@@ -204,7 +204,7 @@ batch_size = 16
 # this is the augmentation configuration we will use for training
 train_datagen = ImageDataGenerator(
         rescale=1./255,
-        shear_range=0.2,
+        shear_range=20,
         zoom_range=0.2,
         horizontal_flip=True)
 
@@ -402,7 +402,7 @@ batch_size = 16
 # prepare data augmentation configuration
 train_datagen = ImageDataGenerator(
         rescale=1./255,
-        shear_range=0.2,
+        shear_range=20,
         zoom_range=0.2,
         horizontal_flip=True)
 
